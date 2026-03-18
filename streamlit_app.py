@@ -1,0 +1,1150 @@
+"""
+Step 9: Streamlit Web UI
+
+Purpose: Interactive dashboard for discovery results
+Features:
+- Summary cards (top candidates, stats)
+- Full reasoning from AI layer
+- Interactive tables with filtering
+- Signal heatmaps (green/yellow/red)
+- Detailed analysis pages
+- Individual stock search
+- Claude AI reasoning in layman terms
+
+Run with: streamlit run streamlit_app.py
+"""
+
+import streamlit as st
+import pandas as pd
+import json
+import sqlite3
+from datetime import datetime
+import plotly.express as px
+import plotly.graph_objects as go
+from validation import ValidationWorkflow
+
+# Try to import AI reasoner (optional)
+try:
+    from ai_reasoner import AIReasoningEngine
+    CLAUDE_AVAILABLE = True
+except:
+    CLAUDE_AVAILABLE = False
+
+# Page config
+st.set_page_config(
+    page_title="Halal Asymmetric Stock Finder",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="auto",  # Auto-collapse sidebar on mobile
+    menu_items={
+        'Get Help': 'https://github.com',
+        'Report a bug': None,
+        'About': "Asymmetric Stock Finder - Find halal stocks with upside potential"
+    }
+)
+
+# Modern Dark Theme CSS
+st.markdown("""
+<style>
+    /* Global Styles */
+    :root {
+        --primary-bg: #0f1419;
+        --secondary-bg: #1a1f2e;
+        --tertiary-bg: #262d3d;
+        --accent-blue: #00a8ff;
+        --accent-purple: #7c3aed;
+        --accent-green: #10b981;
+        --accent-red: #ef4444;
+        --text-primary: #f0f1f3;
+        --text-secondary: #a0aec0;
+        --border-color: #2d3748;
+    }
+    
+    /* Main Background */
+    .stApp {
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        color: #f0f1f3;
+    }
+    
+    /* Headers */
+    h1, h2, h3, h4, h5, h6 {
+        color: #f0f1f3;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+    
+    h1 {
+        background: linear-gradient(135deg, #00a8ff 0%, #7c3aed 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.5rem !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    h2 {
+        color: #f0f1f3;
+        padding-top: 1.5rem;
+        border-top: 2px solid #2d3748;
+        padding-bottom: 1rem;
+    }
+    
+    /* Metric Cards */
+    .metric-card {
+        background: linear-gradient(135deg, #1a1f2e 0%, #262d3d 100%);
+        padding: 20px;
+        border-radius: 12px;
+        color: #f0f1f3;
+        border: 1px solid #2d3748;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        border-color: #00a8ff;
+        box-shadow: 0 8px 24px rgba(0, 168, 255, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    /* Pattern Status Boxes */
+    .full-asymmetric {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+        color: #86efac;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    .partial-asymmetric {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+        color: #fcd34d;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    .not-asymmetric {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+        color: #fca5a5;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Divider */
+    .streamlit-expanderHeader {
+        background-color: #1a1f2e;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+    }
+    
+    /* Data Tables */
+    [data-testid="stDataFrame"] {
+        background-color: #0f1419;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    /* Expanders */
+    .streamlit-expanderHeader:hover {
+        background-color: #262d3d;
+        border-color: #00a8ff;
+    }
+    
+    /* Info boxes */
+    [role="alert"] {
+        background: linear-gradient(135deg, rgba(0, 168, 255, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
+        border: 1px solid rgba(0, 168, 255, 0.3) !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        color: #93c5fd !important;
+    }
+    
+    /* Success boxes */
+    .success-box {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        color: #86efac;
+    }
+    
+    /* Warning boxes */
+    .warning-box {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        color: #fcd34d;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #0099ff 0%, #6366f1 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 168, 255, 0.5);
+    }
+    
+    /* Text colors */
+    p, span, li {
+        color: #e2e8f0;
+    }
+    
+    /* Captions */
+    .stCaption {
+        color: #94a3b8;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f1419 0%, #1a1f2e 100%);
+        border-right: 1px solid #2d3748;
+    }
+    
+    /* Sidebar text */
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] span {
+        color: #e2e8f0;
+    }
+    
+    /* Links */
+    a {
+        color: #00a8ff;
+        text-decoration: none;
+    }
+    
+    a:hover {
+        color: #7c3aed;
+    }
+    
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.8rem !important;
+            margin-bottom: 0.3rem !important;
+        }
+        
+        h2 {
+            font-size: 1.3rem !important;
+            padding-top: 1rem !important;
+        }
+        
+        h3 {
+            font-size: 1.1rem !important;
+        }
+        
+        /* Stack columns single on mobile */
+        [data-testid="column"] {
+            width: 100% !important;
+        }
+        
+        /* Larger touch targets */
+        button, input[type="button"], input[type="submit"] {
+            padding: 12px 16px !important;
+            font-size: 16px !important;
+        }
+        
+        /* Input fields larger on mobile */
+        input[type="text"], textarea, select {
+            font-size: 16px !important;
+            padding: 12px !important;
+        }
+        
+        /* Table responsive */
+        table {
+            font-size: 0.85rem !important;
+        }
+        
+        /* Reduce padding on mobile */
+        .metric-card {
+            padding: 12px !important;
+        }
+        
+        /* Full width cards */
+        [data-testid="stMetricContainer"] {
+            width: 100% !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        h1 {
+            font-size: 1.5rem !important;
+        }
+        
+        h2 {
+            font-size: 1.1rem !important;
+        }
+        
+        p {
+            font-size: 0.95rem !important;
+        }
+        
+        /* Ultra-compact on small phones */
+        .metric-card {
+            padding: 8px !important;
+            margin: 4px 0 !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================================================================
+# DATA LOADING
+# =========================================================================
+
+@st.cache_data
+def load_discovery_results():
+    """Load discovery results from JSON."""
+    try:
+        with open('discovery_results.json') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
+
+@st.cache_data
+def load_checkpoint_data(ticker):
+    """Load full validation data from checkpoint database."""
+    try:
+        conn = sqlite3.connect('discovery_checkpoint.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT validation_result FROM analysis_results WHERE ticker = ?', (ticker,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return json.loads(result[0])
+        return None
+    except Exception as e:
+        st.error(f"Error loading {ticker}: {str(e)}")
+        return None
+
+
+def get_claude_analysis(ticker, validation_data):
+    """Get Claude AI analysis in layman terms."""
+    if not CLAUDE_AVAILABLE:
+        st.warning(f"Claude not available - ANTHROPIC_API_KEY may not be set")
+        return None
+    
+    try:
+        reasoner = AIReasoningEngine()
+        
+        # Use the correct method from AIReasoningEngine
+        result = reasoner.analyze_candidate(ticker, validation_data)
+        
+        if result.get('status') == 'success':
+            analysis_text = result.get('ai_analysis', '')
+            
+            # Try to parse as JSON first
+            try:
+                analysis_json = json.loads(analysis_text)
+                return analysis_json
+            except json.JSONDecodeError:
+                # If not valid JSON, try to extract from plain text response
+                # Look for JSON block within the text (Claude sometimes adds explanation)
+                import re
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', analysis_text, re.DOTALL)
+                if json_match:
+                    try:
+                        analysis_json = json.loads(json_match.group())
+                        return analysis_json
+                    except json.JSONDecodeError:
+                        pass
+                
+                # If still no JSON, return plaintext wrapped in a dict
+                return {
+                    'thesis': analysis_text,
+                    'risks': 'See analysis above',
+                    'catalyst': 'See analysis above',
+                    'conviction': 5,
+                    'recommendation': 'HOLD'
+                }
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            st.error(f"Claude API Error: {error_msg}")
+            return None
+    except Exception as e:
+        st.error(f"Exception analyzing {ticker}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+# =========================================================================
+# PAGE: HOME / SUMMARY
+# =========================================================================
+
+def page_home():
+    """Main dashboard with top candidates."""
+    
+    st.title("Halal Asymmetric Stock Finder")
+    st.markdown("*Islamic-compliant value investing with asymmetric patterns*")
+    
+    # Load results
+    results = load_discovery_results()
+    
+    if not results:
+        st.error("No discovery results found. Run discovery.py first.")
+        return
+    
+    # HELP SECTION
+    with st.expander("What do these metrics mean?"):
+        st.markdown("""
+        ### Key Metrics Explained
+        
+        **Score (0-3.0 scale)**
+        - Composite ranking = 60% Asymmetry Quality + 40% Signal Strength
+        - Higher score = stronger investment opportunity
+        
+        **Asymmetric Pattern**
+        - **Full Asymmetric**: 3+ components present (Floor + Mispricing + Catalyst)
+        - **Partial Asymmetric**: 1-2 components present
+        - **No Pattern**: Insufficient asymmetry
+        
+        **Signals (0-24 scale)**
+        - 16 technical & fundamental signals evaluated
+        - Higher count = more evidence supporting the pattern
+        - Full pattern candidates typically have 18-24 signals
+        
+        **Track Type**
+        - **Track A**: Clean companies (no interest-bearing debt, halal-friendly)
+        - **Track B**: Modified structure (some interest-bearing debt, can be acceptable)
+        - **Track A-Transition**: Moving toward cleaner structure
+        
+        **Halal Status**
+        - **Pass**: Islamic screening gates approved
+        - **Fail**: Interest-based debt or non-compliant structure
+        
+        ### Chart Meanings
+        
+        **Asymmetric Pattern Distribution (Pie Chart)**
+        - Visual breakdown of how many candidates have Full/Partial/None patterns
+        - Goal: Find companies with Full asymmetric potential
+        
+        **Track Distribution (Bar Chart)**
+        - How many candidates fall into each halal track category
+        - Shows compliance profile of screened universe
+        """)
+    
+    st.divider()
+    
+    # SUMMARY METRICS
+    st.header("Discovery Summary")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Candidates", len(results))
+        st.caption("Stocks screened from universe")
+    
+    with col2:
+        full_asymmetric = sum(1 for r in results if r['pattern'] == 'full')
+        st.metric("Full Asymmetric", full_asymmetric)
+        st.caption("Strong 3-part patterns")
+    
+    with col3:
+        partial_asymmetric = sum(1 for r in results if r['pattern'] == 'partial')
+        st.metric("Partial Asymmetric", partial_asymmetric)
+        st.caption("Moderate 1-2 parts")
+    
+    with col4:
+        passed_signals = sum(1 for r in results if r['signal_raw'] >= r.get('signal_threshold', 16))
+        st.metric("Strong Signals", passed_signals)
+        st.caption("16+ signals confirmed")
+    
+    st.divider()
+    
+    # TOP 5 CANDIDATES
+    st.header("Top 5 Opportunities")
+    
+    st.write("Ranked by composite score (60% asymmetry quality + 40% signal strength)")
+    
+    with st.expander("What's this?"):
+        st.info("**Top candidates** are ranked by how strong their asymmetric pattern is AND how many technical/fundamental signals confirm it. Aims for 3.0 score (perfect asymmetry + max signals).")
+    
+    for i, candidate in enumerate(results[:5], 1):
+        col_rank, col_ticker, col_score, col_pattern = st.columns([0.5, 1, 1.5, 2])
+        
+        ticker = candidate['ticker']
+        score = candidate['composite_score']
+        pattern = candidate['pattern'].upper()
+        track = candidate['track']
+        halal = candidate['halal_status'].upper()
+        signals = f"{candidate['signal_raw']}/24"
+        
+        with col_rank:
+            st.markdown(f"### #{i}")
+        
+        with col_ticker:
+            st.markdown(f"### {ticker}")
+        
+        with col_score:
+            st.markdown(f"**Score: {score:.2f}**")
+            st.caption("(0-3.0 scale)")
+        
+        with col_pattern:
+            if pattern == 'FULL':
+                st.markdown(f'<div class="full-asymmetric"><strong>Full Asymmetric</strong></div>', unsafe_allow_html=True)
+            elif pattern == 'PARTIAL':
+                st.markdown(f'<div class="partial-asymmetric"><strong>Partial Asymmetric</strong></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="not-asymmetric">No Pattern</div>', unsafe_allow_html=True)
+        
+        # Detail row
+        detail_col1, detail_col2, detail_col3, detail_col4, detail_btn = st.columns([1, 1, 1, 1, 1.5])
+        
+        with detail_col1:
+            st.caption(f"Track: **{track}**")
+        
+        with detail_col2:
+            st.caption(f"Signals: **{signals}**")
+        
+        with detail_col3:
+            st.caption(f"Halal: **{halal}**")
+        
+        with detail_col4:
+            st.caption(f"Score: {score:.2f}/3.0")
+        
+        with detail_btn:
+            if st.button("Details", key=f"detail_{ticker}"):
+                st.session_state.selected_detail_ticker = ticker
+                st.rerun()
+        
+        st.divider()
+    
+    # STATISTICS
+    st.header("Statistics")
+    
+    chart_col1, chart_col2 = st.columns(2)
+    
+    with chart_col1:
+        st.subheader("Asymmetric Pattern Distribution")
+        st.caption("Breakdown of pattern strength across all candidates")
+        st.caption("Goal: High % of FULL patterns = Quality universe")
+        
+        # Pattern distribution
+        pattern_counts = {}
+        for r in results:
+            pattern = r['pattern'].upper()
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+        
+        fig = px.pie(
+            values=list(pattern_counts.values()),
+            names=list(pattern_counts.keys()),
+            title="",
+            color_discrete_map={'FULL': '#28a745', 'PARTIAL': '#ffc107', 'NOT_ASYMMETRIC': '#dc3545'},
+            labels={
+                'FULL': 'Full Asymmetric (3 components)',
+                'PARTIAL': 'Partial Asymmetric (1-2 components)',
+                'NOT_ASYMMETRIC': 'No Pattern'
+            }
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with chart_col2:
+        st.subheader("Track Distribution")
+        st.caption("How many candidates fit each halal track")
+        st.caption("Goal: Mix of Track A (clean) and Track B (structured) candidates")
+        
+        # Track distribution
+        track_counts = {}
+        for r in results:
+            track = r['track']
+            track_counts[track] = track_counts.get(track, 0) + 1
+        
+        # Sort tracks for consistent display
+        track_order = ['Track A', 'Track B', 'Track A-Transition']
+        sorted_tracks = [t for t in track_order if t in track_counts.keys()]
+        sorted_counts = [track_counts[t] for t in sorted_tracks]
+        
+        # Create DataFrame for Plotly
+        track_df = pd.DataFrame({
+            'Track Type': sorted_tracks,
+            'Count': sorted_counts
+        })
+        
+        fig = px.bar(
+            track_df,
+            x='Track Type',
+            y='Count',
+            title="",
+            color_discrete_sequence=['#667eea'],
+            text='Count'
+        )
+        fig.update_traces(textposition='auto')
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Track explanation
+        with st.expander("What do Track A/B mean?"):
+            st.markdown("""
+            - **Track A**: Clean Islamic structure (no interest-bearing debt) - Safest option
+            - **Track B**: Modified structure (has interest debt but acceptable) - Moderate
+            - **Track A-Transition**: Moving toward cleaner structure - Improving
+            """)
+
+    
+    # FULL TABLE
+    st.header("Full Candidate List")
+    
+    with st.expander("Column Definitions"):
+        st.markdown("""
+        | Column | Meaning |
+        |--------|---------|
+        | **Rank** | Position (1-10) based on composite score |
+        | **Ticker** | Stock symbol |
+        | **Score** | Composite score (0-3.0): 60% asymmetry + 40% signals |
+        | **Asymmetry** | Raw asymmetry component (0-3.0) |
+        | **Signals** | Number of confirming technical/fundamental signals (0-24) |
+        | **Pattern** | Pattern type: FULL (3 parts), PARTIAL (1-2 parts), or NONE |
+        | **Track** | Halal structure: Track A (clean), Track B (structured), or A-Transition |
+        | **Halal** | Islamic screening result: PASS or FAIL |
+        | **Conviction** | Overall confidence level: low/medium/high |
+        """)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(results)
+    df = df.sort_values('composite_score', ascending=False)
+    
+    # Format for display
+    display_df = df[[
+        'rank', 'ticker', 'composite_score', 'asymmetry_score', 
+        'signal_raw', 'pattern', 'track', 'halal_status', 'conviction'
+    ]].copy()
+    
+    display_df.columns = [
+        'Rank', 'Ticker', 'Score', 'Asymmetry', 'Signals', 
+        'Pattern', 'Track', 'Halal', 'Conviction'
+    ]
+    
+    # Color code
+    def color_pattern(val):
+        if val == 'full':
+            return 'background-color: #d4edda'
+        elif val == 'partial':
+            return 'background-color: #fff3cd'
+        else:
+            return 'background-color: #f8d7da'
+    
+    styled_df = display_df.style.map(
+        color_pattern, 
+        subset=['Pattern']
+    ).format({
+        'Score': '{:.2f}',
+        'Asymmetry': '{:.1f}',
+        'Signals': '{:.0f}'
+    })
+    
+    st.dataframe(styled_df, use_container_width=True)
+
+
+# =========================================================================
+# PAGE: CANDIDATE DETAIL
+# =========================================================================
+
+def page_candidate_detail(ticker):
+    """Detailed analysis for a single candidate."""
+    
+    st.title(f"{ticker} - Detailed Analysis")
+    
+    # Load data
+    validation = load_checkpoint_data(ticker)
+    
+    if not validation:
+        st.error(f"Could not load data for {ticker}")
+        return
+    
+    # Extract information
+    stages = validation.get('stages', {})
+    halal_gates = stages.get('halal_gates', {})
+    track_detection = stages.get('track_detection', {})
+    signal_scoring = stages.get('signal_scoring', {})
+    pattern_detection = stages.get('pattern_detection', {})
+    
+    # SUMMARY
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Halal Status",
+            halal_gates.get('halal_status', 'Unknown').upper()
+        )
+    
+    with col2:
+        st.metric(
+            "Track",
+            track_detection.get('track', 'Unknown')
+        )
+    
+    with col3:
+        signal_score = signal_scoring.get('total_score', 0)
+        st.metric(
+            "Signals",
+            f"{signal_score}/24"
+        )
+    
+    with col4:
+        pattern = pattern_detection.get('result', 'unknown').upper()
+        st.metric(
+            "Pattern",
+            pattern
+        )
+    
+    st.divider()
+    
+    # HALAL GATES
+    st.header("Halal Compliance Gates")
+    
+    halal_verdict = halal_gates.get('halal_verdict', 'Unknown')
+    st.info(f"**Verdict:** {halal_verdict}")
+    
+    gates = halal_gates.get('gates', {})
+    for gate_name, gate_result in gates.items():
+        if gate_result:
+            col1, col2, col3 = st.columns([1, 2, 3])
+            
+            with col1:
+                status = "✓ PASS" if gate_result.get('passed') else "✗ FAIL"
+                st.subheader(status)
+            
+            with col2:
+                st.write(f"**{gate_result.get('gate', 'Unknown')}**")
+            
+            with col3:
+                st.write(gate_result.get('reason', 'N/A'))
+    
+    st.divider()
+    
+    # TRACK ANALYSIS
+    st.header("Track Analysis")
+    
+    track_reasoning = track_detection.get('reasoning', 'No reasoning available')
+    st.write(track_reasoning)
+    
+    fcf_history = track_detection.get('fcf_history', [])
+    if fcf_history:
+        st.caption(f"FCF History (5y): {fcf_history}")
+    
+    st.divider()
+    
+    # SIGNALS
+    st.header("Signal Analysis")
+    
+    st.write("16 technical & fundamental signals that confirm the asymmetric pattern")
+    
+    with st.expander("What are signals?"):
+        st.info("**Signals** are technical indicators and fundamental metrics that validate the asymmetric thesis. Examples: momentum, earnings growth, insider buying, contrarian sentiment. More signals = stronger conviction.")
+    
+    signals = signal_scoring.get('signals', {})
+    signal_threshold = signal_scoring.get('threshold', 16)
+    
+    if signals:
+        signal_list = []
+        for signal_name, signal_data in signals.items():
+            signal_list.append({
+                'Signal': signal_name.replace('_', ' ').title(),
+                'Score': signal_data.get('score', 0),
+                'Value': str(signal_data.get('value', 'N/A'))[:50],
+                'Reason': signal_data.get('reason', 'N/A')[:100]
+            })
+        
+        df_signals = pd.DataFrame(signal_list)
+        st.dataframe(df_signals, use_container_width=True)
+        
+        total_signals = signal_scoring.get('total_score', 0)
+        st.caption(f"**Total Score:** {total_signals}/{signal_threshold} signals confirmed")
+        if total_signals >= signal_threshold:
+            st.success(f"Passes signal threshold for strong conviction")
+    
+    st.divider()
+    
+    # PATTERN DETECTION
+    st.header("Asymmetric Pattern Components")
+    
+    with st.expander("What do Floor/Mispricing/Catalyst mean?"):
+        st.markdown("""
+        **Floor (Downside Protection)**
+        - What: A valuation or structural floor that limits downside risk
+        - Example: Company has $X in net cash per share as floor value
+        - Why it matters: Even if investment goes wrong, limited downside
+        
+        **Mispricing (Market Wrong)**
+        - What: Evidence that the market has misprice the stock
+        - Example: Stock trading at 5x earnings while peers trade at 20x
+        - Why it matters: Upside potential if market realizes its mistake
+        
+        **Catalyst (Re-rating Trigger)**
+        - What: An upcoming event/timeline that could trigger stock re-rating
+        - Example: FDA approval, earnings surprise, new product launch
+        - Why it matters: Gives market a reason to correct the mispricing
+        """)
+    
+    pattern_result = pattern_detection.get('result', 'unknown').upper()
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        floor_status = "✓ Present" if pattern_detection.get('floor') else "✗ Missing"
+        st.metric("Floor", floor_status)
+        if pattern_detection.get('floor_reason'):
+            st.caption(pattern_detection.get('floor_reason'))
+    
+    with col2:
+        mispricing_status = "✓ Present" if pattern_detection.get('mispricing') else "✗ Missing"
+        st.metric("Mispricing", mispricing_status)
+        if pattern_detection.get('mispricing_reason'):
+            st.caption(pattern_detection.get('mispricing_reason'))
+    
+    with col3:
+        catalyst_status = "✓ Present" if pattern_detection.get('catalyst') else "✗ Missing"
+        st.metric("Catalyst", catalyst_status)
+        if pattern_detection.get('catalyst_reason'):
+            st.caption(pattern_detection.get('catalyst_reason'))
+    
+    # Color code the pattern result
+    if pattern_result == 'FULL':
+        st.success(f"FULL ASYMMETRIC PATTERN - All 3 components present. {pattern_detection.get('reasoning', '')}")
+    elif pattern_result == 'PARTIAL':
+        st.warning(f"PARTIAL ASYMMETRIC PATTERN - 1-2 components present. {pattern_detection.get('reasoning', '')}")
+    else:
+        st.info(f"NO ASYMMETRIC PATTERN - Insufficient components. {pattern_detection.get('reasoning', '')}")
+    
+    # AI REASONING (CLAUDE)
+    st.header("Claude AI Analysis (Plain English)")
+    
+    with st.spinner("Getting Claude analysis..."):
+        ai_analysis = get_claude_analysis(ticker, validation)
+    
+    if ai_analysis:
+        # Display as formatted sections, not raw JSON
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.subheader("Investment Thesis")
+            st.write(ai_analysis.get('thesis', 'N/A'))
+            
+        with col2:
+            recommendation = ai_analysis.get('recommendation', 'HOLD')
+            if recommendation == 'BUY':
+                st.success(recommendation)
+            elif recommendation == 'SELL':
+                st.error(recommendation)
+            else:
+                st.info(recommendation)
+        
+        st.divider()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Key Risks")
+            st.write(ai_analysis.get('risks', 'N/A'))
+        
+        with col2:
+            st.subheader("Catalyst & Timeline")
+            st.write(ai_analysis.get('catalyst', 'N/A'))
+        
+        st.divider()
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            conviction = ai_analysis.get('conviction', 0)
+            st.metric("Conviction Level", f"{conviction}/10")
+        with col2:
+            st.metric("Confidence", f"{min(conviction * 10, 100)}%")
+        with col3:
+            rec = ai_analysis.get('recommendation', 'HOLD')
+            st.metric("Recommendation", rec)
+    else:
+        st.info("💡 **Tip:** Set ANTHROPIC_API_KEY in .env file to enable AI explanations")
+
+
+# =========================================================================
+# PAGE: SEARCH STOCK
+# =========================================================================
+
+def page_search_stock():
+    """Search and analyze individual stocks."""
+    
+    st.title("Search Individual Stock")
+    
+    st.markdown("""
+    Enter a stock ticker to analyze if it has **asymmetric profit chances** 
+    based on our Halal Islamic-compliant screening.
+    """)
+    
+    with st.expander("How does individual stock analysis work?"):
+        st.markdown("""
+        When you search a stock, the system:
+        1. **Fetches latest data** from yfinance (price, financials)
+        2. **Screens halal gates** (interest-bearing debt, business model compliance)
+        3. **Detects track** (Track A/B/A-Transition based on cash flow)
+        4. **Scores signals** (16 technical/fundamental indicators)
+        5. **Finds asymmetric patterns** (Floor + Mispricing + Catalyst)
+        6. **Generates AI reasoning** (Claude explains in plain English)
+        
+        Results shown: Same analysis as dashboard candidates
+        """)
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        ticker_input = st.text_input(
+            "Enter stock ticker (e.g., MSFT, AAPL, GOOGL):",
+            placeholder="Type ticker here..."
+        ).upper()
+    
+    with col2:
+        search_button = st.button("Analyze", use_container_width=True)
+    
+    if search_button and ticker_input:
+        with st.spinner(f"🔄 Analyzing {ticker_input}..."):
+            try:
+                # Run validation on the stock
+                validator = ValidationWorkflow()
+                validation = validator.validate_ticker(ticker_input)
+                
+                if validation.get('status') == 'error':
+                    st.error(f"Error: {validation.get('message', 'Could not fetch data')}")
+                    st.info("Make sure the ticker is valid (e.g., MSFT, AAPL)")
+                else:
+                    # Extract results
+                    stages = validation.get('stages', {})
+                    halal_gates = stages.get('halal_gates', {})
+                    track_detection = stages.get('track_detection', {})
+                    signal_scoring = stages.get('signal_scoring', {})
+                    pattern_detection = stages.get('pattern_detection', {})
+                    
+                    # SUMMARY METRICS
+                    st.header(f"{ticker_input} Analysis")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        halal_status = halal_gates.get('halal_status', 'unknown').upper()
+                        status_color = "🟢" if halal_status == "UNVERIFIED" else "🔴" if halal_status == "FAIL" else "🟡"
+                        st.metric("Halal Status", f"{status_color} {halal_status}")
+                    
+                    with col2:
+                        track = track_detection.get('track', 'Unknown')
+                        st.metric("Track Type", track)
+                    
+                    with col3:
+                        signal_score = signal_scoring.get('total_score', 0)
+                        st.metric("Signals Score", f"{signal_score}/24")
+                    
+                    with col4:
+                        pattern = pattern_detection.get('result', 'not_asymmetric').upper()
+                        pattern_emoji = "✅" if pattern == "FULL" else "⚠️" if pattern == "PARTIAL" else "❌"
+                        st.metric("Asymmetric Pattern", f"{pattern_emoji} {pattern}")
+                    
+                    st.divider()
+                    
+                    # HALAL VERDICT
+                    st.header("Halal Screening")
+                    
+                    halal_verdict = halal_gates.get('halal_verdict', 'Unknown')
+                    
+                    if halal_gates.get('halal_status') == 'fail':
+                        st.error(f"Does not pass Halal screening\n\nReason: {halal_verdict}")
+                    else:
+                        st.success(f"Passes Halal screening\n\n{halal_verdict}")
+                    
+                    # TRACK EXPLANATION
+                    st.header("Track Classification")
+                    
+                    track_reasoning = track_detection.get('reasoning', 'No details available')
+                    st.write(track_reasoning)
+                    
+                    if track == "A":
+                        st.info("**Track A** = Profitable compounder with strong FCF generation")
+                    elif track == "A-Transition":
+                        st.warning("**Track A-Transition** = Was profitable, now struggling (potential disruption)")
+                    elif track == "B":
+                        st.info("**Track B** = High-growth investment (negative FCF but investing heavily)")
+                    
+                    st.divider()
+                    
+                    # SIGNALS
+                    st.header("Key Signals")
+                    
+                    signals = signal_scoring.get('signals', {})
+                    threshold = signal_scoring.get('threshold', 16)
+                    
+                    if signals:
+                        signal_list = []
+                        for signal_name, signal_data in signals.items():
+                            score = signal_data.get('score', 0)
+                            emoji = "🟢" if score == 3 else "🟡" if score == 2 else "🔴"
+                            signal_list.append({
+                                'Signal': signal_name.replace('_', ' ').title(),
+                                'Score': f"{emoji} {score}/3",
+                                'Reason': signal_data.get('reason', 'N/A')[:80]
+                            })
+                        
+                        df_signals = pd.DataFrame(signal_list)
+                        st.dataframe(df_signals, use_container_width=True, hide_index=True)
+                        
+                        st.caption(f"Total Score: {signal_score}/{threshold}")
+                    
+                    st.divider()
+                    
+                    # ASYMMETRIC PATTERN
+                    st.header("Asymmetric Pattern Analysis")
+                    
+                    pattern_components = pattern_detection.get('components', {})
+                    pattern_result = pattern_detection.get('result', 'not_asymmetric').upper()
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        floor_present = pattern_detection.get('floor', False)
+                        st.metric("Floor (Downside Protection)", "Present" if floor_present else "Missing")
+                    
+                    with col2:
+                        mispricing_present = pattern_detection.get('mispricing', False)
+                        st.metric("Mispricing (Market Wrong)", "Present" if mispricing_present else "Missing")
+                    
+                    with col3:
+                        catalyst_present = pattern_detection.get('catalyst', False)
+                        st.metric("Catalyst (Re-rating Trigger)", "Present" if catalyst_present else "Missing")
+                    
+                    if pattern_result == "FULL":
+                        st.success(f"FULL ASYMMETRIC PATTERN DETECTED\n\nAll 3 components present = High conviction opportunity")
+                    elif pattern_result == "PARTIAL":
+                        st.warning(f"PARTIAL ASYMMETRIC PATTERN\n\n2 of 3 components present = Medium conviction opportunity")
+                    else:
+                        st.info(f"NO ASYMMETRIC PATTERN\n\nFewer than 2 components = Lower conviction")
+                    
+                    st.divider()
+                    
+                    # CLAUDE AI ANALYSIS
+                    st.header("AI Investment Analysis")
+                    
+                    with st.spinner("Getting Claude analysis..."):
+                        ai_analysis = get_claude_analysis(ticker_input, validation)
+                    
+                    if ai_analysis:
+                        # Display as formatted sections, not raw JSON
+                        col1, col2 = st.columns([3, 1])
+                        
+                        with col1:
+                            st.subheader("Investment Thesis")
+                            st.write(ai_analysis.get('thesis', 'N/A'))
+                            
+                        with col2:
+                            recommendation = ai_analysis.get('recommendation', 'HOLD')
+                            if recommendation == 'BUY':
+                                st.success(recommendation)
+                            elif recommendation == 'SELL':
+                                st.error(recommendation)
+                            else:
+                                st.info(recommendation)
+                        
+                        st.divider()
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.subheader("Key Risks")
+                            st.write(ai_analysis.get('risks', 'N/A'))
+                        
+                        with col2:
+                            st.subheader("Catalyst & Timeline")
+                            st.write(ai_analysis.get('catalyst', 'N/A'))
+                        
+                        st.divider()
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            conviction = ai_analysis.get('conviction', 0)
+                            st.metric("Conviction Level", f"{conviction}/10")
+                        with col2:
+                            st.metric("Confidence", f"{min(conviction * 10, 100)}%")
+                        with col3:
+                            rec = ai_analysis.get('recommendation', 'HOLD')
+                            st.metric("Recommendation", rec)
+                    else:
+                        st.info("💡 **Tip:** Set ANTHROPIC_API_KEY in .env file to enable AI explanations")
+                    
+            except Exception as e:
+                st.error(f"❌ Error analyzing {ticker_input}: {str(e)}")
+    
+    elif search_button:
+        st.warning("Please enter a stock ticker first")
+
+
+# =========================================================================
+# MAIN APP
+# =========================================================================
+
+def main():
+    """Main app router."""
+    
+    # Initialize session state
+    if 'selected_detail_ticker' not in st.session_state:
+        st.session_state.selected_detail_ticker = None
+    
+    # If a detail page is selected, show it
+    if st.session_state.selected_detail_ticker:
+        st.sidebar.title("Navigation")
+        if st.sidebar.button("Back to Dashboard"):
+            st.session_state.selected_detail_ticker = None
+            st.rerun()
+        
+        page_candidate_detail(st.session_state.selected_detail_ticker)
+        return
+    
+    # Otherwise show dashboard
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Select Page",
+        ["Dashboard", "Top 5 Analysis", "Search Stock"],
+        label_visibility="collapsed"
+    )
+    
+    if page == "Dashboard":
+        page_home()
+    
+    elif page == "Top 5 Analysis":
+        st.title("Top 5 Detailed Analysis")
+        
+        results = load_discovery_results()
+        if results:
+            selected_ticker = st.selectbox(
+                "Select candidate:",
+                [r['ticker'] for r in results[:5]]
+            )
+            
+            page_candidate_detail(selected_ticker)
+    
+    elif page == "Search Stock":
+        page_search_stock()
+    
+    # Footer
+    st.divider()
+    st.markdown("""
+    ---
+    **Halal Asymmetric Stock Finder** | Islamic-compliant value investing
+    
+    Built for ethical investors
+    """)
+
+
+if __name__ == "__main__":
+    main()

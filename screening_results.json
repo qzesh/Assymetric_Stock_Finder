@@ -1,0 +1,40 @@
+{
+  "candidates": [
+    "PL",
+    "PRI",
+    "FORM",
+    "CRUS",
+    "TKR",
+    "RGEN",
+    "TMDX",
+    "ACIW",
+    "KC",
+    "OSCR",
+    "GTLB",
+    "NMRK",
+    "UPST",
+    "ALRM",
+    "INTA"
+  ],
+  "count": 15,
+  "applied_filters": {
+    "market_cap_min": "$1.0B",
+    "market_cap_max": "$10.0B",
+    "exchanges": [
+      "NYSE",
+      "NASDAQ"
+    ],
+    "revenue_growth_min": "0.0%",
+    "debt_equity_max": 2.0,
+    "reduction": "42 \u2192 15 stocks"
+  },
+  "timestamp": "2026-03-15T17:04:11.705195",
+  "detailed_results": {
+    "market_cap_before": 42,
+    "market_cap_after": 19,
+    "exchange_before": 19,
+    "exchange_after": 17,
+    "revenue_growth_before": 17,
+    "revenue_growth_after": 15
+  }
+}

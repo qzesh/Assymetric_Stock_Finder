@@ -1,0 +1,430 @@
+{
+  "MSFT": {
+    "ticker": "MSFT",
+    "timestamp": "2026-03-15T16:52:14.677440",
+    "status": "complete",
+    "error": null,
+    "stages": {
+      "data_fetch": {
+        "status": "success",
+        "timestamp": "2026-03-15T16:52:17.647594"
+      },
+      "halal_gates": {
+        "ticker": "MSFT",
+        "halal_status": "unverified",
+        "gates": {
+          "gate1_riba": {
+            "status": "pass",
+            "reason": "Sector \"Technology\" is not a riba-based business model."
+          },
+          "gate2_debt": {
+            "status": "pass",
+            "reason": "Debt ratio 2.1% is below 33% threshold.",
+            "debt_ratio": 0.02060902502605165
+          },
+          "gate3_haram_revenue": {
+            "status": "unverified",
+            "reason": "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue.",
+            "haram_revenue_pct": null
+          },
+          "gate4_loss_financing": {
+            "status": "pass",
+            "reason": "Gate 4 (Loss Financing) applies to Track B only. Track A automatically passes."
+          }
+        },
+        "first_failure": null,
+        "flags": [
+          "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue."
+        ],
+        "halal_verdict": "HALAL UNVERIFIED - 1 flag(s) require manual review"
+      },
+      "track_detection": {
+        "ticker": "MSFT",
+        "track": "A",
+        "conviction": "high",
+        "fcf_positive_count": 4,
+        "fcf_negative_count": 1,
+        "fcf_data_quality": "excellent",
+        "fcf_history_clean": [
+          71611000000.0,
+          74071000000.0,
+          59475000000.0,
+          65149000000.0,
+          NaN
+        ],
+        "recent_fcf_trend": "strengthening",
+        "reasoning": "Track A (Profitable Compounder): FCF positive in 4/5 years. Business generates real cash consistently.",
+        "warning": null,
+        "ai_prompt_append": null
+      },
+      "signal_scoring": {
+        "ticker": "MSFT",
+        "track": "A",
+        "signals": {
+          "roic": {
+            "value": 0.2035725190346412,
+            "score": 3,
+            "reason": "ROIC 20.4% > 20%"
+          },
+          "roic_trend": {
+            "value": -0.017991358472786434,
+            "score": 2,
+            "reason": "ROIC stable (-1.8%)"
+          },
+          "fcf_consistency": {
+            "value": 4,
+            "score": 2,
+            "reason": "FCF positive 4/5"
+          },
+          "reinvestment_rate": {
+            "value": 0.2967731165056171,
+            "score": 2,
+            "reason": "Reinvestment 29.7%"
+          },
+          "normalized_earnings": {
+            "value": "margin_comp=-0.7%",
+            "score": 1,
+            "reason": "No trough signal: margin only -0.7% below"
+          },
+          "ev_fcf_valuation": {
+            "value": 0.05633910991328139,
+            "score": 1,
+            "reason": "EV/FCF at or above 5yr avg"
+          },
+          "insider_ownership": {
+            "value": null,
+            "score": 2,
+            "reason": "Insider ownership data not available (requires additional data source)"
+          },
+          "net_cash_floor": {
+            "value": null,
+            "score": 2,
+            "reason": "Missing balance sheet components"
+          }
+        },
+        "total_score": 15,
+        "max_score": 24,
+        "pass_threshold": 16,
+        "passes": false,
+        "data_quality_issues": [],
+        "warnings": []
+      },
+      "pattern_detection": {
+        "ticker": "MSFT",
+        "track": "A",
+        "floor": true,
+        "floor_reason": "ROIC 20.4% > 18% (asset-light)",
+        "mispricing": true,
+        "mispricing_reason": "Price punished: 14.7% above 52-week low",
+        "catalyst": false,
+        "catalyst_reason": "No catalyst identified",
+        "result": "partial",
+        "components_present": [
+          "floor",
+          "mispricing"
+        ],
+        "components_missing": [
+          "catalyst"
+        ],
+        "conviction_max": "medium",
+        "reasoning": "Partial Asymmetric Setup: Missing catalyst. Qualifies for AI reasoning but conviction cannot exceed Medium."
+      }
+    },
+    "final_verdict": "TICKER: MSFT | TRACK: A | HALAL: UNVERIFIED | SIGNALS: 15/24 (FAIL) | PATTERN: PARTIAL | MAX CONVICTION: MEDIUM",
+    "ai_input": {
+      "ticker": "MSFT",
+      "track": "A",
+      "halal_status": "unverified",
+      "halal_flags": [
+        "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue."
+      ],
+      "signals": {
+        "roic": {
+          "value": 0.2035725190346412,
+          "score": 3,
+          "reason": "ROIC 20.4% > 20%"
+        },
+        "roic_trend": {
+          "value": -0.017991358472786434,
+          "score": 2,
+          "reason": "ROIC stable (-1.8%)"
+        },
+        "fcf_consistency": {
+          "value": 4,
+          "score": 2,
+          "reason": "FCF positive 4/5"
+        },
+        "reinvestment_rate": {
+          "value": 0.2967731165056171,
+          "score": 2,
+          "reason": "Reinvestment 29.7%"
+        },
+        "normalized_earnings": {
+          "value": "margin_comp=-0.7%",
+          "score": 1,
+          "reason": "No trough signal: margin only -0.7% below"
+        },
+        "ev_fcf_valuation": {
+          "value": 0.05633910991328139,
+          "score": 1,
+          "reason": "EV/FCF at or above 5yr avg"
+        },
+        "insider_ownership": {
+          "value": null,
+          "score": 2,
+          "reason": "Insider ownership data not available (requires additional data source)"
+        },
+        "net_cash_floor": {
+          "value": null,
+          "score": 2,
+          "reason": "Missing balance sheet components"
+        }
+      },
+      "total_score": 15,
+      "signal_pass": false,
+      "pattern_result": "partial",
+      "pattern_components": {
+        "floor": true,
+        "floor_reason": "ROIC 20.4% > 18% (asset-light)",
+        "mispricing": true,
+        "mispricing_reason": "Price punished: 14.7% above 52-week low",
+        "catalyst": false,
+        "catalyst_reason": "No catalyst identified"
+      },
+      "conviction_max": "medium",
+      "current_price": 395.55,
+      "market_cap": 2939877064704
+    }
+  },
+  "AAPL": {
+    "ticker": "AAPL",
+    "timestamp": "2026-03-15T16:52:17.663798",
+    "status": "complete",
+    "error": null,
+    "stages": {
+      "data_fetch": {
+        "status": "success",
+        "timestamp": "2026-03-15T16:52:19.896968"
+      },
+      "halal_gates": {
+        "ticker": "AAPL",
+        "halal_status": "unverified",
+        "gates": {
+          "gate1_riba": {
+            "status": "pass",
+            "reason": "Sector \"Technology\" is not a riba-based business model."
+          },
+          "gate2_debt": {
+            "status": "pass",
+            "reason": "Debt ratio 2.7% is below 33% threshold.",
+            "debt_ratio": 0.02683635019866749
+          },
+          "gate3_haram_revenue": {
+            "status": "unverified",
+            "reason": "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue.",
+            "haram_revenue_pct": null
+          },
+          "gate4_loss_financing": {
+            "status": "pass",
+            "reason": "Gate 4 (Loss Financing) applies to Track B only. Track A automatically passes."
+          }
+        },
+        "first_failure": null,
+        "flags": [
+          "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue."
+        ],
+        "halal_verdict": "HALAL UNVERIFIED - 1 flag(s) require manual review"
+      },
+      "track_detection": {
+        "ticker": "AAPL",
+        "track": "A",
+        "conviction": "high",
+        "fcf_positive_count": 4,
+        "fcf_negative_count": 1,
+        "fcf_data_quality": "excellent",
+        "fcf_history_clean": [
+          98767000000.0,
+          108807000000.0,
+          99584000000.0,
+          111443000000.0,
+          NaN
+        ],
+        "recent_fcf_trend": "strengthening",
+        "reasoning": "Track A (Profitable Compounder): FCF positive in 4/5 years. Business generates real cash consistently.",
+        "warning": null,
+        "ai_prompt_append": null
+      },
+      "signal_scoring": {
+        "ticker": "AAPL",
+        "track": "A",
+        "signals": {
+          "roic": {
+            "value": 0.37036418448896424,
+            "score": 3,
+            "reason": "ROIC 37.0% > 20%"
+          },
+          "roic_trend": {
+            "value": 0.04618236063472281,
+            "score": 3,
+            "reason": "ROIC improving (+4.6%)"
+          },
+          "fcf_consistency": {
+            "value": 4,
+            "score": 2,
+            "reason": "FCF positive 4/5"
+          },
+          "reinvestment_rate": {
+            "value": 0.11823051513257743,
+            "score": 1,
+            "reason": "Reinvestment 11.8%"
+          },
+          "normalized_earnings": {
+            "value": "margin_comp=-1.1%",
+            "score": 1,
+            "reason": "No trough signal: margin only -1.1% below"
+          },
+          "ev_fcf_valuation": {
+            "value": -0.059566960624500176,
+            "score": 1,
+            "reason": "EV/FCF at or above 5yr avg"
+          },
+          "insider_ownership": {
+            "value": null,
+            "score": 2,
+            "reason": "Insider ownership data not available (requires additional data source)"
+          },
+          "net_cash_floor": {
+            "value": null,
+            "score": 2,
+            "reason": "Missing balance sheet components"
+          }
+        },
+        "total_score": 15,
+        "max_score": 24,
+        "pass_threshold": 16,
+        "passes": false,
+        "data_quality_issues": [],
+        "warnings": []
+      },
+      "pattern_detection": {
+        "ticker": "AAPL",
+        "track": "A",
+        "floor": true,
+        "floor_reason": "ROIC 37.0% > 18% (asset-light)",
+        "mispricing": false,
+        "mispricing_reason": "No mispricing signal detected",
+        "catalyst": true,
+        "catalyst_reason": "ROIC trending upward: Capital allocation improving",
+        "result": "partial",
+        "components_present": [
+          "floor",
+          "catalyst"
+        ],
+        "components_missing": [
+          "mispricing"
+        ],
+        "conviction_max": "medium",
+        "reasoning": "Partial Asymmetric Setup: Missing mispricing. Qualifies for AI reasoning but conviction cannot exceed Medium."
+      }
+    },
+    "final_verdict": "TICKER: AAPL | TRACK: A | HALAL: UNVERIFIED | SIGNALS: 15/24 (FAIL) | PATTERN: PARTIAL | MAX CONVICTION: MEDIUM",
+    "ai_input": {
+      "ticker": "AAPL",
+      "track": "A",
+      "halal_status": "unverified",
+      "halal_flags": [
+        "Revenue segment data unavailable. Halal Unverified - investor reviews segment revenue."
+      ],
+      "signals": {
+        "roic": {
+          "value": 0.37036418448896424,
+          "score": 3,
+          "reason": "ROIC 37.0% > 20%"
+        },
+        "roic_trend": {
+          "value": 0.04618236063472281,
+          "score": 3,
+          "reason": "ROIC improving (+4.6%)"
+        },
+        "fcf_consistency": {
+          "value": 4,
+          "score": 2,
+          "reason": "FCF positive 4/5"
+        },
+        "reinvestment_rate": {
+          "value": 0.11823051513257743,
+          "score": 1,
+          "reason": "Reinvestment 11.8%"
+        },
+        "normalized_earnings": {
+          "value": "margin_comp=-1.1%",
+          "score": 1,
+          "reason": "No trough signal: margin only -1.1% below"
+        },
+        "ev_fcf_valuation": {
+          "value": -0.059566960624500176,
+          "score": 1,
+          "reason": "EV/FCF at or above 5yr avg"
+        },
+        "insider_ownership": {
+          "value": null,
+          "score": 2,
+          "reason": "Insider ownership data not available (requires additional data source)"
+        },
+        "net_cash_floor": {
+          "value": null,
+          "score": 2,
+          "reason": "Missing balance sheet components"
+        }
+      },
+      "total_score": 15,
+      "signal_pass": false,
+      "pattern_result": "partial",
+      "pattern_components": {
+        "floor": true,
+        "floor_reason": "ROIC 37.0% > 18% (asset-light)",
+        "mispricing": false,
+        "mispricing_reason": "No mispricing signal detected",
+        "catalyst": true,
+        "catalyst_reason": "ROIC trending upward: Capital allocation improving"
+      },
+      "conviction_max": "medium",
+      "current_price": 250.12,
+      "market_cap": 3676245065728
+    }
+  },
+  "JPM": {
+    "ticker": "JPM",
+    "timestamp": "2026-03-15T16:52:19.902311",
+    "status": "complete",
+    "error": null,
+    "stages": {
+      "data_fetch": {
+        "status": "success",
+        "timestamp": "2026-03-15T16:52:22.476270"
+      },
+      "halal_gates": {
+        "ticker": "JPM",
+        "halal_status": "fail",
+        "gates": {
+          "gate1_riba": {
+            "status": "fail",
+            "reason": "Sector \"Financial Services\" is structurally interest-based (riba). Auto-failed."
+          },
+          "gate2_debt": null,
+          "gate3_haram_revenue": null,
+          "gate4_loss_financing": null
+        },
+        "first_failure": "Gate 1: Riba Business Model",
+        "flags": [
+          "Sector \"Financial Services\" is structurally interest-based (riba). Auto-failed."
+        ],
+        "halal_verdict": "HALAL FAIL - Sector \"Financial Services\" is structurally interest-based (riba). Auto-failed."
+      },
+      "track_detection": null,
+      "signal_scoring": null,
+      "pattern_detection": null
+    },
+    "final_verdict": "ANALYSIS HALTED: Stock failed halal compliance gate. HALAL FAIL - Sector \"Financial Services\" is structurally interest-based (riba). Auto-failed."
+  }
+}
