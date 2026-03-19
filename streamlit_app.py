@@ -43,6 +43,21 @@ st.set_page_config(
     }
 )
 
+# PWA Support - Add manifest and service worker
+st.markdown("""
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00a8ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stock Finder">
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW registration failed:', err));
+}
+</script>
+""", unsafe_allow_html=True)
+
 # Modern Dark Theme CSS
 st.markdown("""
 <style>
