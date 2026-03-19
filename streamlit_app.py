@@ -726,29 +726,71 @@ def page_home():
     
     st.divider()
     
-    # SUMMARY METRICS
+    # SUMMARY METRICS & STATISTICS - COMBINED LAYOUT
     st.header("Discovery Summary")
     
-    col1, col2, col3, col4 = st.columns(4)
+    # Calculate metrics upfront
+    total_candidates = len(results)
+    full_asymmetric = sum(1 for r in results if r['pattern'] == 'full')
+    partial_asymmetric = sum(1 for r in results if r['pattern'] == 'partial')
+    passed_signals = sum(1 for r in results if r['signal_raw'] >= r.get('signal_threshold', 16))
     
-    with col1:
-        st.metric("Total Candidates", len(results))
-        st.caption("Stocks screened from universe")
+    # Main layout: Metrics on left, charts on right
+    metrics_col, charts_col = st.columns([1, 1.2])
     
-    with col2:
-        full_asymmetric = sum(1 for r in results if r['pattern'] == 'full')
-        st.metric("Full Asymmetric", full_asymmetric)
-        st.caption("Strong 3-part patterns")
+    with metrics_col:
+        st.subheader("Key Metrics")
+        
+        # 2x2 metric grid
+        metric_row1_col1, metric_row1_col2 = st.columns(2)
+        with metric_row1_col1:
+            st.metric("Total Candidates", total_candidates)
+        with metric_row1_col2:
+            st.metric("Full Asymmetric", full_asymmetric)
+        
+        metric_row2_col1, metric_row2_col2 = st.columns(2)
+        with metric_row2_col1:
+            st.metric("Partial Asymmetric", partial_asymmetric)
+        with metric_row2_col2:
+            st.metric("Strong Signals", passed_signals)
+        
+        st.markdown("---")
+        
+        # Quick stats
+        st.markdown("### Quick Stats")
+        
+        full_pct = (full_asymmetric / total_candidates * 100) if total_candidates > 0 else 0
+        avg_signals = passed_signals
+        
+        st.markdown(f"""
+        💯 **Asymmetry Quality**: {full_pct:.0f}% full patterns
+        
+        📊 **Signal Strength**: {passed_signals} stocks with 16+ signals
+        
+        🎯 **Conversion Rate**: {full_asymmetric} out of {total_candidates} candidates
+        """)
     
-    with col3:
-        partial_asymmetric = sum(1 for r in results if r['pattern'] == 'partial')
-        st.metric("Partial Asymmetric", partial_asymmetric)
-        st.caption("Moderate 1-2 parts")
-    
-    with col4:
-        passed_signals = sum(1 for r in results if r['signal_raw'] >= r.get('signal_threshold', 16))
-        st.metric("Strong Signals", passed_signals)
-        st.caption("16+ signals confirmed")
+    with charts_col:
+        # Pattern distribution pie chart
+        pattern_counts = {}
+        for r in results:
+            pattern = r['pattern'].upper()
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+        
+        fig_pattern = px.pie(
+            values=list(pattern_counts.values()),
+            names=['Full Asymmetric' if x == 'FULL' else 'Partial' if x == 'PARTIAL' else 'None' for x in pattern_counts.keys()],
+            title="Pattern Distribution",
+            color_discrete_map={'Full Asymmetric': '#10b981', 'Partial': '#f59e0b', 'None': '#ef4444'},
+            hole=0.4
+        )
+        fig_pattern.update_layout(
+            height=300,
+            showlegend=True,
+            font=dict(size=11),
+            margin=dict(t=30, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_pattern, use_container_width=True, height=300)
     
     st.divider()
     
@@ -810,39 +852,14 @@ def page_home():
         
         st.divider()
     
-    # STATISTICS
-    st.header("Statistics")
+    # ADDITIONAL INSIGHTS
+    st.header("Detailed Breakdown")
     
-    chart_col1, chart_col2 = st.columns(2)
+    insight_col1, insight_col2 = st.columns(2)
     
-    with chart_col1:
-        st.subheader("Asymmetric Pattern Distribution")
-        st.caption("Breakdown of pattern strength across all candidates")
-        st.caption("Goal: High % of FULL patterns = Quality universe")
-        
-        # Pattern distribution
-        pattern_counts = {}
-        for r in results:
-            pattern = r['pattern'].upper()
-            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
-        
-        fig = px.pie(
-            values=list(pattern_counts.values()),
-            names=list(pattern_counts.keys()),
-            title="",
-            color_discrete_map={'FULL': '#28a745', 'PARTIAL': '#ffc107', 'NOT_ASYMMETRIC': '#dc3545'},
-            labels={
-                'FULL': 'Full Asymmetric (3 components)',
-                'PARTIAL': 'Partial Asymmetric (1-2 components)',
-                'NOT_ASYMMETRIC': 'No Pattern'
-            }
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with chart_col2:
+    with insight_col1:
         st.subheader("Track Distribution")
-        st.caption("How many candidates fit each halal track")
-        st.caption("Goal: Mix of Track A (clean) and Track B (structured) candidates")
+        st.caption("Halal compliance profile of candidates")
         
         # Track distribution
         track_counts = {}
@@ -870,15 +887,63 @@ def page_home():
             text='Count'
         )
         fig.update_traces(textposition='auto')
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(
+            height=280,
+            showlegend=False,
+            margin=dict(t=0, b=0, l=0, r=0),
+            xaxis_title="",
+            yaxis_title=""
+        )
+        st.plotly_chart(fig, use_container_width=True, height=280)
         
         # Track explanation
-        with st.expander("What do Track A/B mean?"):
+        with st.expander("What do these mean?"):
             st.markdown("""
-            - **Track A**: Clean Islamic structure (no interest-bearing debt) - Safest option
-            - **Track B**: Modified structure (has interest debt but acceptable) - Moderate
-            - **Track A-Transition**: Moving toward cleaner structure - Improving
+            - **Track A**: Clean structure (no interest debt) 🟢
+            - **Track B**: Modified structure (some interest) 🟡
+            - **Track A-Transition**: Improving structure 📈
             """)
+    
+    with insight_col2:
+        st.subheader("Signal Coverage")
+        st.caption("How many stocks have strong signals")
+        
+        # Create signal distribution
+        signal_bins = [0, 8, 16, 24]
+        signal_labels = ['Weak\n(0-8)', 'Medium\n(9-16)', 'Strong\n(17-24)']
+        
+        signal_counts = [0, 0, 0]
+        for r in results:
+            sig = r['signal_raw']
+            if sig < 9:
+                signal_counts[0] += 1
+            elif sig < 17:
+                signal_counts[1] += 1
+            else:
+                signal_counts[2] += 1
+        
+        signal_df = pd.DataFrame({
+            'Signal Level': signal_labels,
+            'Count': signal_counts
+        })
+        
+        fig_signals = px.bar(
+            signal_df,
+            x='Signal Level',
+            y='Count',
+            title="",
+            color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981'],
+            text='Count'
+        )
+        fig_signals.update_traces(textposition='auto')
+        fig_signals.update_layout(
+            height=280,
+            showlegend=False,
+            margin=dict(t=0, b=0, l=0, r=0),
+            xaxis_title="",
+            yaxis_title=""
+        )
+        st.plotly_chart(fig_signals, use_container_width=True, height=280)
 
     
     # FULL TABLE
