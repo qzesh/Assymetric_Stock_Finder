@@ -58,32 +58,44 @@ if ('serviceWorker' in navigator) {
 </script>
 """, unsafe_allow_html=True)
 
-# Modern Dark Theme CSS
+# Modern Dark Theme CSS - Jet Black Edition
 st.markdown("""
 <style>
     /* Global Styles */
     :root {
-        --primary-bg: #0f1419;
-        --secondary-bg: #1a1f2e;
-        --tertiary-bg: #262d3d;
+        --primary-bg: #0a0e13;
+        --secondary-bg: #121821;
+        --tertiary-bg: #1a2332;
         --accent-blue: #00a8ff;
         --accent-purple: #7c3aed;
         --accent-green: #10b981;
         --accent-red: #ef4444;
-        --text-primary: #f0f1f3;
-        --text-secondary: #a0aec0;
-        --border-color: #2d3748;
+        --text-primary: #ffffff;
+        --text-secondary: #b0b8c1;
+        --border-color: #1f2937;
     }
     
-    /* Main Background */
+    /* Main Background - Pure Jet Black */
     .stApp {
-        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        background: #0a0e13;
         color: #f0f1f3;
+    }
+    
+    /* Container - Full Width Optimization */
+    .main {
+        max-width: 100%;
+        padding: 0 !important;
+    }
+    
+    /* Block Container */
+    [data-testid="stForm"], 
+    [data-testid="stVerticalBlock"] > [data-testid="column"] {
+        width: 100% !important;
     }
     
     /* Headers */
     h1, h2, h3, h4, h5, h6 {
-        color: #f0f1f3;
+        color: #ffffff;
         font-weight: 700;
         letter-spacing: -0.5px;
     }
@@ -93,126 +105,165 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 2.5rem !important;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem !important;
+        padding: 20px 20px 0 20px !important;
     }
     
     h2 {
-        color: #f0f1f3;
-        padding-top: 1.5rem;
-        border-top: 2px solid #2d3748;
-        padding-bottom: 1rem;
+        color: #ffffff;
+        padding: 20px 20px 0 20px !important;
+        margin-top: 1.5rem !important;
+        border-top: 2px solid #1f2937;
+        padding-top: 1.5rem !important;
+        padding-bottom: 0rem !important;
     }
     
-    /* Metric Cards */
+    /* Metric Cards - Large, Touch-Friendly */
     .metric-card {
-        background: linear-gradient(135deg, #1a1f2e 0%, #262d3d 100%);
-        padding: 20px;
-        border-radius: 12px;
+        background: linear-gradient(135deg, #121821 0%, #1a2332 100%);
+        padding: 24px;
+        border-radius: 16px;
         color: #f0f1f3;
-        border: 1px solid #2d3748;
+        border: 1px solid #1f2937;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     
     .metric-card:hover {
         border-color: #00a8ff;
-        box-shadow: 0 8px 24px rgba(0, 168, 255, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0, 168, 255, 0.2);
+        transform: translateY(-4px);
+        background: linear-gradient(135deg, #1a2332 0%, #212d3d 100%);
     }
     
-    /* Pattern Status Boxes */
+    /* Metric values - Large text for mobile */
+    [data-testid="stMetricContainer"] {
+        background: linear-gradient(135deg, #121821 0%, #1a2332 100%);
+        padding: 24px !important;
+        border-radius: 16px !important;
+        border: 1px solid #1f2937 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    [data-testid="stMetricContainer"] label {
+        font-size: 0.95rem !important;
+        color: #b0b8c1 !important;
+        margin-bottom: 8px !important;
+    }
+    
+    [data-testid="stMetricContainer"] span {
+        font-size: 1.8rem !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Pattern Status Boxes - Enhanced for Mobile */
     .full-asymmetric {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
         color: #86efac;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 4px solid #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 16px;
+        border-radius: 12px;
+        border-left: 5px solid #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.4);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
     }
     
     .partial-asymmetric {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.08) 100%);
         color: #fcd34d;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 4px solid #f59e0b;
-        border: 1px solid rgba(245, 158, 11, 0.3);
+        padding: 16px;
+        border-radius: 12px;
+        border-left: 5px solid #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.4);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
     }
     
     .not-asymmetric {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.08) 100%);
         color: #fca5a5;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 4px solid #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        padding: 16px;
+        border-radius: 12px;
+        border-left: 5px solid #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.4);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
     }
     
     /* Divider */
     .streamlit-expanderHeader {
-        background-color: #1a1f2e;
-        border: 1px solid #2d3748;
-        border-radius: 8px;
+        background-color: #121821;
+        border: 1px solid #1f2937;
+        border-radius: 12px;
     }
     
-    /* Data Tables */
+    /* Data Tables - Jet Black */
     [data-testid="stDataFrame"] {
-        background-color: #0f1419;
-        border: 1px solid #2d3748;
-        border-radius: 8px;
+        background-color: #0a0e13 !important;
+        border: 1px solid #1f2937 !important;
+        border-radius: 12px !important;
         overflow: hidden;
     }
     
     /* Expanders */
     .streamlit-expanderHeader:hover {
-        background-color: #262d3d;
+        background-color: #1a2332;
         border-color: #00a8ff;
     }
     
     /* Info boxes */
     [role="alert"] {
-        background: linear-gradient(135deg, rgba(0, 168, 255, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
-        border: 1px solid rgba(0, 168, 255, 0.3) !important;
-        border-radius: 8px !important;
-        padding: 12px !important;
+        background: linear-gradient(135deg, rgba(0, 168, 255, 0.15) 0%, rgba(124, 58, 237, 0.15) 100%) !important;
+        border: 1px solid rgba(0, 168, 255, 0.4) !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
         color: #93c5fd !important;
+        box-shadow: 0 4px 12px rgba(0, 168, 255, 0.1) !important;
     }
     
     /* Success boxes */
     .success-box {
         background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        border-radius: 8px;
-        padding: 12px;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        border-radius: 12px;
+        padding: 16px;
         color: #86efac;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
     }
     
     /* Warning boxes */
     .warning-box {
         background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        border-radius: 8px;
-        padding: 12px;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 12px;
+        padding: 16px;
         color: #fcd34d;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
     }
     
-    /* Buttons */
+    /* Buttons - Larger for Touch */
     .stButton > button {
         background: linear-gradient(135deg, #0099ff 0%, #6366f1 100%);
         color: white;
         border: none;
-        border-radius: 8px;
-        padding: 10px 24px;
+        border-radius: 12px;
+        padding: 14px 28px;
         font-weight: 600;
+        font-size: 1rem;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3);
+        box-shadow: 0 6px 20px rgba(0, 168, 255, 0.3);
+        width: 100% !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 168, 255, 0.5);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 168, 255, 0.5);
+        background: linear-gradient(135deg, #00b4ff 0%, #7c7fff 100%);
+    }
+    
+    .stButton > button:active {
+        transform: translateY(-1px);
     }
     
     /* Text colors */
@@ -225,10 +276,10 @@ st.markdown("""
         color: #94a3b8;
     }
     
-    /* Sidebar */
+    /* Sidebar - Jet Black */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f1419 0%, #1a1f2e 100%);
-        border-right: 1px solid #2d3748;
+        background: linear-gradient(180deg, #0a0e13 0%, #121821 100%);
+        border-right: 1px solid #1f2937;
     }
     
     /* Sidebar text */
@@ -237,82 +288,209 @@ st.markdown("""
         color: #e2e8f0;
     }
     
+    /* Sidebar header - Custom Navigation Style */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:first-child {
+        padding: 20px !important;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #1f2937;
+    }
+    
     /* Links */
     a {
         color: #00a8ff;
         text-decoration: none;
+        transition: color 0.2s ease;
     }
     
     a:hover {
         color: #7c3aed;
     }
     
-    /* Mobile Responsiveness */
+    /* Divider */
+    hr {
+        border-color: #1f2937 !important;
+    }
+    
+    /* Input Fields - Mobile Friendly */
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    textarea,
+    select {
+        background-color: #121821 !important;
+        border: 1px solid #1f2937 !important;
+        color: #ffffff !important;
+        border-radius: 10px !important;
+        padding: 12px !important;
+        font-size: 1rem !important;
+    }
+    
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+        border-color: #00a8ff !important;
+        box-shadow: 0 0 0 3px rgba(0, 168, 255, 0.1) !important;
+        background-color: #121821 !important;
+    }
+    
+    /* Mobile Responsiveness - Improved for App Feel */
     @media (max-width: 768px) {
+        .stApp {
+            background: #0a0e13;
+        }
+        
         h1 {
-            font-size: 1.8rem !important;
-            margin-bottom: 0.3rem !important;
+            font-size: 2rem !important;
+            margin-bottom: 0.25rem !important;
+            padding: 16px 16px 0 16px !important;
         }
         
         h2 {
-            font-size: 1.3rem !important;
-            padding-top: 1rem !important;
+            font-size: 1.4rem !important;
+            padding: 16px 16px 0 16px !important;
+            margin-top: 1.2rem !important;
         }
         
         h3 {
-            font-size: 1.1rem !important;
+            font-size: 1.2rem !important;
+            padding: 0 16px !important;
         }
         
-        /* Stack columns single on mobile */
+        p {
+            font-size: 1rem !important;
+            padding: 0 16px !important;
+        }
+        
+        /* Stack columns full width */
         [data-testid="column"] {
             width: 100% !important;
+            max-width: 100% !important;
+            padding: 8px !important;
         }
         
         /* Larger touch targets */
         button, input[type="button"], input[type="submit"] {
-            padding: 12px 16px !important;
-            font-size: 16px !important;
+            padding: 14px 16px !important;
+            font-size: 1rem !important;
+            border-radius: 10px !important;
+            min-height: 48px !important;
         }
         
-        /* Input fields larger on mobile */
-        input[type="text"], textarea, select {
-            font-size: 16px !important;
-            padding: 12px !important;
+        /* Input fields larger */
+        input[type="text"], 
+        input[type="number"],
+        textarea, 
+        select {
+            font-size: 1rem !important;
+            padding: 14px !important;
+            min-height: 44px !important;
         }
         
         /* Table responsive */
         table {
-            font-size: 0.85rem !important;
+            font-size: 0.9rem !important;
         }
         
-        /* Reduce padding on mobile */
-        .metric-card {
-            padding: 12px !important;
-        }
-        
-        /* Full width cards */
+        /* Metric cards full width */
         [data-testid="stMetricContainer"] {
             width: 100% !important;
+            margin: 8px 0 !important;
+        }
+        
+        /* Cards with proper spacing */
+        .metric-card {
+            padding: 16px !important;
+            margin: 8px 0 !important;
+            width: 100% !important;
+        }
+        
+        /* Expanders full width */
+        .streamlit-expanderHeader {
+            border-radius: 10px !important;
+        }
+        
+        /* Top padding for main content */
+        [data-testid="stAppViewContainer"] {
+            padding-top: 12px !important;
         }
     }
     
     @media (max-width: 480px) {
         h1 {
-            font-size: 1.5rem !important;
+            font-size: 1.6rem !important;
+            padding: 12px 12px 0 12px !important;
         }
         
         h2 {
+            font-size: 1.2rem !important;
+            padding: 12px 12px 0 12px !important;
+            margin-top: 1rem !important;
+        }
+        
+        h3 {
             font-size: 1.1rem !important;
+            padding: 0 12px !important;
         }
         
         p {
             font-size: 0.95rem !important;
+            padding: 0 12px !important;
+            line-height: 1.5 !important;
         }
         
-        /* Ultra-compact on small phones */
+        /* Ultra-compact cards */
         .metric-card {
-            padding: 8px !important;
+            padding: 12px !important;
+            margin: 6px 0 !important;
+            border-radius: 10px !important;
+        }
+        
+        [data-testid="stMetricContainer"] {
+            padding: 12px !important;
             margin: 4px 0 !important;
+            border-radius: 10px !important;
+        }
+        
+        [data-testid="stMetricContainer"] span {
+            font-size: 1.6rem !important;
+        }
+        
+        [data-testid="stMetricContainer"] label {
+            font-size: 0.9rem !important;
+        }
+        
+        /* Full width buttons */
+        .stButton > button {
+            width: 100% !important;
+            padding: 12px 12px !important;
+            font-size: 0.95rem !important;
+            min-height: 44px !important;
+        }
+        
+        /* Min column spacing */
+        [data-testid="column"] {
+            padding: 4px !important;
+        }
+        
+        /* Sidebar narrower */
+        [data-testid="stSidebar"] {
+            width: 60% !important;
+        }
+    }
+    
+    /* Extra small phones */
+    @media (max-width: 380px) {
+        h1 {
+            font-size: 1.4rem !important;
+        }
+        
+        [data-testid="stMetricContainer"] span {
+            font-size: 1.4rem !important;
+        }
+        
+        .metric-card {
+            padding: 10px !important;
         }
     }
 </style>
@@ -1117,26 +1295,49 @@ def main():
     
     # If a detail page is selected, show it
     if st.session_state.selected_detail_ticker:
-        st.sidebar.title("Navigation")
-        if st.sidebar.button("Back to Dashboard"):
-            st.session_state.selected_detail_ticker = None
-            st.rerun()
+        col1, col2 = st.sidebar.columns([3, 1])
+        with col1:
+            st.sidebar.markdown("#### Selected Stock")
+            st.sidebar.markdown(f"**{st.session_state.selected_detail_ticker}**")
+        with col2:
+            if st.sidebar.button("✕ Close"):
+                st.session_state.selected_detail_ticker = None
+                st.rerun()
         
         page_candidate_detail(st.session_state.selected_detail_ticker)
         return
     
-    # Otherwise show dashboard
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Select Page",
-        ["Dashboard", "Top 5 Analysis", "Search Stock"],
-        label_visibility="collapsed"
-    )
+    # Main Navigation - Enhanced Mobile Experience
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Navigation")
+    st.sidebar.markdown("---")
     
-    if page == "Dashboard":
+    # Use columns for better mobile navigation layout
+    nav_col1, nav_col2, nav_col3 = st.sidebar.columns(3)
+    
+    with nav_col1:
+        if st.button("Dashboard", use_container_width=True, key="nav_home"):
+            st.session_state.current_page = "Dashboard"
+    
+    with nav_col2:
+        if st.button("Top 5", use_container_width=True, key="nav_top5"):
+            st.session_state.current_page = "Top 5 Analysis"
+    
+    with nav_col3:
+        if st.button("Search", use_container_width=True, key="nav_search"):
+            st.session_state.current_page = "Search Stock"
+    
+    # Initialize current page if not set
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Dashboard"
+    
+    st.sidebar.markdown("---")
+    
+    # Route to appropriate page
+    if st.session_state.current_page == "Dashboard":
         page_home()
     
-    elif page == "Top 5 Analysis":
+    elif st.session_state.current_page == "Top 5 Analysis":
         st.title("Top 5 Detailed Analysis")
         
         results = load_discovery_results()
@@ -1148,7 +1349,7 @@ def main():
             
             page_candidate_detail(selected_ticker)
     
-    elif page == "Search Stock":
+    elif st.session_state.current_page == "Search Stock":
         page_search_stock()
     
     # Footer
