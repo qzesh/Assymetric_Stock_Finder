@@ -104,7 +104,7 @@ st.markdown("""
         background: linear-gradient(135deg, #00a8ff 0%, #7c3aed 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.5rem !important;
+        font-size: 3rem !important;
         margin-bottom: 0.3rem !important;
         padding: 20px 20px 0 20px !important;
     }
@@ -116,6 +116,26 @@ st.markdown("""
         border-top: 2px solid #1f2937;
         padding-top: 1.5rem !important;
         padding-bottom: 0rem !important;
+        font-size: 1.8rem !important;
+    }
+    
+    h3 {
+        color: #ffffff;
+        font-size: 1.5rem !important;
+    }
+    
+    h4 {
+        color: #ffffff;
+        font-size: 1.2rem !important;
+    }
+    
+    p {
+        font-size: 1.1rem !important;
+        line-height: 1.6 !important;
+    }
+    
+    span, li {
+        font-size: 1rem !important;
     }
     
     /* Metric Cards - Large, Touch-Friendly */
@@ -269,30 +289,38 @@ st.markdown("""
     /* Text colors */
     p, span, li {
         color: #e2e8f0;
+        font-size: 1.1rem !important;
     }
     
     /* Captions */
     .stCaption {
         color: #94a3b8;
+        font-size: 1rem !important;
     }
     
-    /* Sidebar - Jet Black */
+    /* Sidebar text and radio buttons */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0a0e13 0%, #121821 100%);
         border-right: 1px solid #1f2937;
     }
     
-    /* Sidebar text */
     [data-testid="stSidebar"] p, 
     [data-testid="stSidebar"] span {
         color: #e2e8f0;
+        font-size: 1.1rem !important;
     }
     
-    /* Sidebar header - Custom Navigation Style */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:first-child {
-        padding: 20px !important;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #1f2937;
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        font-size: 1.6rem !important;
+        padding: 0 !important;
+        margin: 8px 0 !important;
+    }
+    
+    /* Radio buttons bigger */
+    [data-testid="stRadio"] label {
+        font-size: 1.1rem !important;
     }
     
     /* Links */
@@ -341,25 +369,26 @@ st.markdown("""
         }
         
         h1 {
-            font-size: 2rem !important;
+            font-size: 2.2rem !important;
             margin-bottom: 0.25rem !important;
             padding: 16px 16px 0 16px !important;
         }
         
         h2 {
-            font-size: 1.4rem !important;
+            font-size: 1.6rem !important;
             padding: 16px 16px 0 16px !important;
             margin-top: 1.2rem !important;
         }
         
         h3 {
-            font-size: 1.2rem !important;
+            font-size: 1.3rem !important;
             padding: 0 16px !important;
         }
         
         p {
-            font-size: 1rem !important;
+            font-size: 1.05rem !important;
             padding: 0 16px !important;
+            line-height: 1.6 !important;
         }
         
         /* Stack columns full width */
@@ -372,7 +401,7 @@ st.markdown("""
         /* Larger touch targets */
         button, input[type="button"], input[type="submit"] {
             padding: 14px 16px !important;
-            font-size: 1rem !important;
+            font-size: 1.05rem !important;
             border-radius: 10px !important;
             min-height: 48px !important;
         }
@@ -382,14 +411,14 @@ st.markdown("""
         input[type="number"],
         textarea, 
         select {
-            font-size: 1rem !important;
+            font-size: 1.05rem !important;
             padding: 14px !important;
             min-height: 44px !important;
         }
         
         /* Table responsive */
         table {
-            font-size: 0.9rem !important;
+            font-size: 0.95rem !important;
         }
         
         /* Metric cards full width */
@@ -414,27 +443,33 @@ st.markdown("""
         [data-testid="stAppViewContainer"] {
             padding-top: 12px !important;
         }
+        
+        /* Sidebar text bigger on mobile */
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span {
+            font-size: 1.1rem !important;
+        }
     }
     
     @media (max-width: 480px) {
         h1 {
-            font-size: 1.6rem !important;
+            font-size: 1.9rem !important;
             padding: 12px 12px 0 12px !important;
         }
         
         h2 {
-            font-size: 1.2rem !important;
+            font-size: 1.4rem !important;
             padding: 12px 12px 0 12px !important;
             margin-top: 1rem !important;
         }
         
         h3 {
-            font-size: 1.1rem !important;
+            font-size: 1.2rem !important;
             padding: 0 12px !important;
         }
         
         p {
-            font-size: 0.95rem !important;
+            font-size: 1rem !important;
             padding: 0 12px !important;
             line-height: 1.5 !important;
         }
@@ -453,18 +488,18 @@ st.markdown("""
         }
         
         [data-testid="stMetricContainer"] span {
-            font-size: 1.6rem !important;
+            font-size: 1.5rem !important;
         }
         
         [data-testid="stMetricContainer"] label {
-            font-size: 0.9rem !important;
+            font-size: 0.95rem !important;
         }
         
         /* Full width buttons */
         .stButton > button {
             width: 100% !important;
             padding: 12px 12px !important;
-            font-size: 0.95rem !important;
+            font-size: 1rem !important;
             min-height: 44px !important;
         }
         
@@ -482,11 +517,11 @@ st.markdown("""
     /* Extra small phones */
     @media (max-width: 380px) {
         h1 {
-            font-size: 1.4rem !important;
+            font-size: 1.7rem !important;
         }
         
         [data-testid="stMetricContainer"] span {
-            font-size: 1.4rem !important;
+            font-size: 1.3rem !important;
         }
         
         .metric-card {
@@ -1295,49 +1330,26 @@ def main():
     
     # If a detail page is selected, show it
     if st.session_state.selected_detail_ticker:
-        col1, col2 = st.sidebar.columns([3, 1])
-        with col1:
-            st.sidebar.markdown("#### Selected Stock")
-            st.sidebar.markdown(f"**{st.session_state.selected_detail_ticker}**")
-        with col2:
-            if st.sidebar.button("✕ Close"):
-                st.session_state.selected_detail_ticker = None
-                st.rerun()
+        st.sidebar.title("Navigation")
+        if st.sidebar.button("Back to Dashboard"):
+            st.session_state.selected_detail_ticker = None
+            st.rerun()
         
         page_candidate_detail(st.session_state.selected_detail_ticker)
         return
     
-    # Main Navigation - Enhanced Mobile Experience
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Navigation")
-    st.sidebar.markdown("---")
+    # Otherwise show dashboard
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Select Page",
+        ["Dashboard", "Top 5 Analysis", "Search Stock"],
+        label_visibility="collapsed"
+    )
     
-    # Use columns for better mobile navigation layout
-    nav_col1, nav_col2, nav_col3 = st.sidebar.columns(3)
-    
-    with nav_col1:
-        if st.button("Dashboard", use_container_width=True, key="nav_home"):
-            st.session_state.current_page = "Dashboard"
-    
-    with nav_col2:
-        if st.button("Top 5", use_container_width=True, key="nav_top5"):
-            st.session_state.current_page = "Top 5 Analysis"
-    
-    with nav_col3:
-        if st.button("Search", use_container_width=True, key="nav_search"):
-            st.session_state.current_page = "Search Stock"
-    
-    # Initialize current page if not set
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = "Dashboard"
-    
-    st.sidebar.markdown("---")
-    
-    # Route to appropriate page
-    if st.session_state.current_page == "Dashboard":
+    if page == "Dashboard":
         page_home()
     
-    elif st.session_state.current_page == "Top 5 Analysis":
+    elif page == "Top 5 Analysis":
         st.title("Top 5 Detailed Analysis")
         
         results = load_discovery_results()
@@ -1349,7 +1361,7 @@ def main():
             
             page_candidate_detail(selected_ticker)
     
-    elif st.session_state.current_page == "Search Stock":
+    elif page == "Search Stock":
         page_search_stock()
     
     # Footer
