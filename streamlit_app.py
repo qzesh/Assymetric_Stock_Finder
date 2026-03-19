@@ -564,12 +564,67 @@ def load_checkpoint_data(ticker):
         return None
 
 
-def get_claude_analysis(ticker, validation_data):
-    """Get Claude AI analysis in layman terms."""
+def get_cached_ai_analysis(ticker):
+    """Get cached Claude AI analysis if valid (not expired)."""
+    try:
+        conn = sqlite3.connect('discovery_checkpoint.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT ai_analysis, cached_at FROM ai_analysis_cache 
+            WHERE ticker = ? AND expires_at > datetime('now')
+        ''', (ticker,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            ai_analysis_text = result[0]
+            cached_at = result[1]
+            return (ai_analysis_text, cached_at)
+        return (None, None)
+    except Exception as e:
+        return (None, None)
+
+
+def get_claude_analysis(ticker, validation_data, force_refresh=False):
+    """
+    Get Claude AI analysis with caching.
+    Cache is valid for 14 days. Set force_refresh=True to bypass cache.
+    """
     if not CLAUDE_AVAILABLE:
         st.warning(f"Claude not available - ANTHROPIC_API_KEY may not be set")
-        return None
+        return None, None
     
+    # Check cache first (unless force_refresh is True)
+    if not force_refresh:
+        cached_text, cached_at = get_cached_ai_analysis(ticker)
+        if cached_text:
+            # Parse cached text
+            try:
+                analysis_json = json.loads(cached_text)
+                return analysis_json, cached_at
+            except json.JSONDecodeError:
+                # Try to extract JSON from cached text
+                import re
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cached_text, re.DOTALL)
+                if json_match:
+                    try:
+                        analysis_json = json.loads(json_match.group())
+                        return analysis_json, cached_at
+                    except json.JSONDecodeError:
+                        pass
+                
+                # Return wrapped plaintext
+                return {
+                    'thesis': cached_text,
+                    'risks': 'See analysis above',
+                    'catalyst': 'See analysis above',
+                    'conviction': 5,
+                    'recommendation': 'HOLD'
+                }, cached_at
+    
+    # If no valid cache or force_refresh, call Claude API
     try:
         reasoner = AIReasoningEngine()
         
@@ -582,16 +637,15 @@ def get_claude_analysis(ticker, validation_data):
             # Try to parse as JSON first
             try:
                 analysis_json = json.loads(analysis_text)
-                return analysis_json
+                return analysis_json, None
             except json.JSONDecodeError:
                 # If not valid JSON, try to extract from plain text response
-                # Look for JSON block within the text (Claude sometimes adds explanation)
                 import re
                 json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', analysis_text, re.DOTALL)
                 if json_match:
                     try:
                         analysis_json = json.loads(json_match.group())
-                        return analysis_json
+                        return analysis_json, None
                     except json.JSONDecodeError:
                         pass
                 
@@ -602,16 +656,16 @@ def get_claude_analysis(ticker, validation_data):
                     'catalyst': 'See analysis above',
                     'conviction': 5,
                     'recommendation': 'HOLD'
-                }
+                }, None
         else:
             error_msg = result.get('error', 'Unknown error')
             st.error(f"Claude API Error: {error_msg}")
-            return None
+            return None, None
     except Exception as e:
         st.error(f"Exception analyzing {ticker}: {str(e)}")
         import traceback
         traceback.print_exc()
-        return None
+        return None, None
 
 
 # =========================================================================
@@ -1052,11 +1106,33 @@ def page_candidate_detail(ticker):
     else:
         st.info(f"NO ASYMMETRIC PATTERN - Insufficient components. {pattern_detection.get('reasoning', '')}")
     
-    # AI REASONING (CLAUDE)
+    # AI REASONING (CLAUDE) - WITH CACHING
     st.header("Claude AI Analysis (Plain English)")
     
+    # Cache control
+    col_title, col_refresh = st.columns([4, 1])
+    with col_refresh:
+        if st.button("Refresh Analysis", use_container_width=True, key=f"refresh_{ticker}"):
+            st.session_state[f"force_refresh_{ticker}"] = True
+            st.rerun()
+    
+    force_refresh = st.session_state.get(f"force_refresh_{ticker}", False)
+    
     with st.spinner("Getting Claude analysis..."):
-        ai_analysis = get_claude_analysis(ticker, validation)
+        ai_analysis, cached_at = get_claude_analysis(ticker, validation, force_refresh=force_refresh)
+    
+    # Clear the force_refresh flag
+    if force_refresh:
+        st.session_state[f"force_refresh_{ticker}"] = False
+    
+    # Show cache status
+    if cached_at:
+        from datetime import datetime as dt
+        cached_time = dt.fromisoformat(cached_at)
+        age_mins = int((dt.now() - cached_time).total_seconds() / 60)
+        st.caption(f"📦 Cached {age_mins} minutes ago (expires in 14 days)")
+    elif ai_analysis:
+        st.caption("✨ Fresh analysis from Claude API")
     
     if ai_analysis:
         # Display as formatted sections, not raw JSON
@@ -1261,11 +1337,33 @@ def page_search_stock():
                     
                     st.divider()
                     
-                    # CLAUDE AI ANALYSIS
+                    # CLAUDE AI ANALYSIS - WITH CACHING
                     st.header("AI Investment Analysis")
                     
+                    # Cache control
+                    col_title, col_refresh = st.columns([4, 1])
+                    with col_refresh:
+                        if st.button("Refresh Analysis", use_container_width=True, key=f"search_refresh_{ticker_input}"):
+                            st.session_state[f"search_force_refresh_{ticker_input}"] = True
+                            st.rerun()
+                    
+                    force_refresh = st.session_state.get(f"search_force_refresh_{ticker_input}", False)
+                    
                     with st.spinner("Getting Claude analysis..."):
-                        ai_analysis = get_claude_analysis(ticker_input, validation)
+                        ai_analysis, cached_at = get_claude_analysis(ticker_input, validation, force_refresh=force_refresh)
+                    
+                    # Clear the force_refresh flag
+                    if force_refresh:
+                        st.session_state[f"search_force_refresh_{ticker_input}"] = False
+                    
+                    # Show cache status
+                    if cached_at:
+                        from datetime import datetime as dt
+                        cached_time = dt.fromisoformat(cached_at)
+                        age_mins = int((dt.now() - cached_time).total_seconds() / 60)
+                        st.caption(f"📦 Cached {age_mins} minutes ago (expires in 14 days)")
+                    elif ai_analysis:
+                        st.caption("✨ Fresh analysis from Claude API")
                     
                     if ai_analysis:
                         # Display as formatted sections, not raw JSON

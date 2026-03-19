@@ -69,6 +69,16 @@ class DiscoveryWorkflow:
             )
         ''')
         
+        # Create AI analysis cache table (NEW)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ai_analysis_cache (
+                ticker TEXT PRIMARY KEY,
+                ai_analysis TEXT,
+                cached_at TEXT,
+                expires_at TEXT
+            )
+        ''')
+        
         conn.commit()
         conn.close()
         self.logger.info(f"Checkpoint database initialized: {self.checkpoint_db}")
@@ -149,6 +159,13 @@ class DiscoveryWorkflow:
         ]
         result['top_5'] = top_5
         
+        # ===================================================================
+        # PHASE 4: BATCH GENERATE CLAUDE AI ANALYSIS (CACHED)
+        # ===================================================================
+        
+        self.logger.info("Phase 4: Batch generating Claude AI analysis for top 5")
+        self._batch_generate_ai_analysis(ranking[:5], validation_results)
+        
         result['completed_at'] = datetime.now().isoformat()
         result['status'] = 'complete'
         
@@ -212,6 +229,88 @@ class DiscoveryWorkflow:
             conn.close()
         except Exception as e:
             self.logger.error(f"Error saving checkpoint for {ticker}: {str(e)}")
+    
+    # =====================================================================
+    # PHASE 4: BATCH CLAUDE AI ANALYSIS GENERATION & CACHING
+    # =====================================================================
+    
+    def _batch_generate_ai_analysis(self, top_candidates: List[Dict], validation_results: Dict):
+        """
+        Batch generate Claude AI analysis for top candidates and cache results.
+        Cache expires after 14 days.
+        """
+        try:
+            from ai_reasoner import AIReasoningEngine
+            reasoner = AIReasoningEngine()
+            
+            for candidate in top_candidates:
+                ticker = candidate['ticker']
+                
+                # Check if valid cache exists (not expired)
+                if self._has_valid_cache(ticker):
+                    self.logger.info(f"{ticker}: Using cached AI analysis (valid for 14 days)")
+                    continue
+                
+                # Generate new analysis
+                try:
+                    validation = validation_results.get(ticker, {})
+                    result = reasoner.analyze_candidate(ticker, validation)
+                    
+                    if result.get('status') == 'success':
+                        ai_analysis = result.get('ai_analysis', '')
+                        self._cache_ai_analysis(ticker, ai_analysis)
+                        self.logger.info(f"{ticker}: Claude analysis cached successfully")
+                    else:
+                        self.logger.warning(f"{ticker}: Claude analysis failed - {result.get('error')}")
+                        
+                except Exception as e:
+                    self.logger.error(f"{ticker}: Error generating Claude analysis - {str(e)}")
+                
+                # Rate limit - be nice to Claude API
+                time.sleep(1)
+        
+        except ImportError:
+            self.logger.warning("AI reasoner not available - skipping Claude analysis caching")
+    
+    def _has_valid_cache(self, ticker: str) -> bool:
+        """Check if valid (non-expired) cache exists for ticker."""
+        try:
+            conn = sqlite3.connect(self.checkpoint_db)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT expires_at FROM ai_analysis_cache 
+                WHERE ticker = ? AND expires_at > datetime('now')
+            ''', (ticker,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            return result is not None
+        except Exception as e:
+            self.logger.error(f"Error checking cache for {ticker}: {str(e)}")
+            return False
+    
+    def _cache_ai_analysis(self, ticker: str, ai_analysis: str):
+        """Cache Claude AI analysis with 14-day expiration."""
+        try:
+            from datetime import timedelta
+            conn = sqlite3.connect(self.checkpoint_db)
+            cursor = conn.cursor()
+            
+            now = datetime.now()
+            expires_at = (now + timedelta(days=14)).isoformat()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO ai_analysis_cache
+                (ticker, ai_analysis, cached_at, expires_at)
+                VALUES (?, ?, ?, ?)
+            ''', (ticker, ai_analysis, now.isoformat(), expires_at))
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            self.logger.error(f"Error caching analysis for {ticker}: {str(e)}")
     
     # =====================================================================
     # PHASE 3: RANKING
