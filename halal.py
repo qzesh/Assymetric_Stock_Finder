@@ -11,10 +11,23 @@ Gate 4: Loss Financing (Track B only - equity-funded losses, not debt-funded)
 """
 
 import logging
+import os
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+# Load environment
+load_dotenv()
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+
+try:
+    from anthropic import Anthropic
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
+    logger.warning("Anthropic SDK not installed. Run: pip install anthropic")
 
 
 # GATE 1: Riba Business Model Auto-Fail Sectors
@@ -71,6 +84,10 @@ class HalalGateEngine:
     
     def __init__(self):
         self.logger = logger
+        self.api_key = ANTHROPIC_API_KEY
+        self.client = None
+        if HAS_ANTHROPIC and self.api_key:
+            self.client = Anthropic()
     
     def evaluate_all_gates(
         self,
@@ -194,7 +211,7 @@ class HalalGateEngine:
             results['flags'].append(gate4_result['reason'])
         
         # =================================================================
-        # ALL GATES PASSED
+        # ALL GATES PASSED - CHECK FOR UNVERIFIED FLAGS
         # =================================================================
         
         # Check for unverified flags
@@ -204,9 +221,20 @@ class HalalGateEngine:
         )
         
         if unverified_count > 0:
-            results['halal_status'] = 'unverified'
-            results['halal_verdict'] = f"HALAL UNVERIFIED - {unverified_count} flag(s) require manual review"
-            self.logger.warning(f"{ticker} passed all gates but has {unverified_count} unverified flag(s)")
+            # Use Claude AI to determine pass/fail for unverified cases
+            self.logger.info(f"{ticker} has {unverified_count} unverified flag(s), using Claude AI for review")
+            claude_decision = self._claude_halal_review(ticker, results['flags'], results['gates'])
+            
+            if claude_decision:
+                results['halal_status'] = claude_decision['status']
+                results['halal_verdict'] = claude_decision['verdict']
+                results['claude_review'] = claude_decision['reasoning']
+                self.logger.info(f"{ticker} Claude AI review: {claude_decision['status'].upper()}")
+            else:
+                # Fallback to unverified if Claude fails
+                results['halal_status'] = 'unverified'
+                results['halal_verdict'] = f"HALAL UNVERIFIED - {unverified_count} flag(s) require manual review"
+                self.logger.warning(f"{ticker} passed all gates but has {unverified_count} unverified flag(s)")
         else:
             results['halal_status'] = 'pass'
             results['halal_verdict'] = "HALAL COMPLIANT ✓ All gates passed"
@@ -474,9 +502,111 @@ class HalalGateEngine:
                 'reason': 'Track B losses financed by debt (revolving credit facility). Exceeds halal framework.',
                 'loss_financing_method': 'debt'
             }
+    
+    def _claude_halal_review(self, ticker: str, flags: List[str], gates: Dict) -> Optional[Dict]:
+        """
+        Use Claude AI to make a pass/fail determination for unverified halal cases.
+        
+        Args:
+            ticker: Stock symbol
+            flags: List of warning flags from gate evaluation
+            gates: Dict of all gate results
+            
+        Returns:
+            Dict with {'status': 'pass'/'fail', 'verdict': str, 'reasoning': str} or None if Claude unavailable
+        """
+        
+        if not self.client:
+            self.logger.warning(f"Claude AI unavailable for {ticker} halal review. Returning unverified.")
+            return None
+        
+        try:
+            # Build context for Claude
+            gate_summary = self._summarize_gates(gates)
+            flags_text = '\n'.join([f"- {flag}" for flag in flags])
+            
+            prompt = f"""You are an expert Islamic finance advisor evaluating stock halal compliance.
+
+Stock: {ticker}
+
+GATE EVALUATION SUMMARY:
+{gate_summary}
+
+UNVERIFIED FLAGS REQUIRING REVIEW:
+{flags_text}
+
+Based on the gate results and these flags, determine if {ticker} should be considered HALAL COMPLIANT or NOT HALAL COMPLIANT.
+
+Consider:
+1. The stock has already passed the quantitative gates (debt ratio, revenue checks)
+2. Unverified flags are due to missing data, not actual violations
+3. Islamic finance principles prioritize transparency but allow reasonable business structures
+4. When data is unavailable, a conservative but practical approach is to classify based on available evidence
+
+Respond ONLY with a JSON object in this exact format:
+{{
+  "status": "pass" or "fail",
+  "reasoning": "Brief explanation (1-2 sentences) of why you determined pass or fail",
+  "confidence": "high" or "medium" or "low"
+}}
+
+If you believe the unverified flags indicate potential non-compliance that cannot be resolved without more data, return "fail".
+If you believe the available evidence supports halal compliance, return "pass"."""
+
+            message = self.client.messages.create(
+                model="claude-opus-4-1",
+                max_tokens=200,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            response_text = message.content[0].text
+            
+            # Parse JSON response
+            import json
+            import re
+            
+            # Extract JSON from response
+            json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
+            if json_match:
+                response_json = json.loads(json_match.group())
+                status = response_json.get('status', 'fail').lower()
+                reasoning = response_json.get('reasoning', 'Claude review completed')
+                
+                # Build verdict
+                verdict = f"HALAL {'COMPLIANT' if status == 'pass' else 'NON-COMPLIANT'} (Claude AI Review) - {reasoning}"
+                
+                return {
+                    'status': status,
+                    'verdict': verdict,
+                    'reasoning': reasoning,
+                    'confidence': response_json.get('confidence', 'medium')
+                }
+            else:
+                self.logger.warning(f"Could not parse Claude response for {ticker}: {response_text}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Claude AI review failed for {ticker}: {str(e)}")
+            return None
+    
+    def _summarize_gates(self, gates: Dict) -> str:
+        """Summarize the gate evaluation results for Claude."""
+        
+        summary = []
+        for gate_name, gate_result in gates.items():
+            if gate_result:
+                status = gate_result.get('status', 'unknown')
+                reason = gate_result.get('reason', '')
+                summary.append(f"{gate_name}: {status.upper()} - {reason}")
+        
+        return '\n'.join(summary) if summary else "No gates evaluated"
 
 
-# ==========================================================================
 # HELPER FUNCTION: Extract halal-relevant data from fetcher output
 # ==========================================================================
 
