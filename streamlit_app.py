@@ -736,8 +736,8 @@ def page_home():
     passed_signals = sum(1 for r in results if r['signal_raw'] >= r.get('signal_threshold', 16))
     full_pct = (full_asymmetric / total_candidates * 100) if total_candidates > 0 else 0
     
-    # Main layout: metrics + quick stats LEFT, charts CENTER & RIGHT
-    left_col, center_col, right_col = st.columns([1, 1.1, 1.1])
+    # Main layout: metrics + quick stats LEFT, charts CENTER
+    left_col, center_col = st.columns([1, 1.2])
     
     with left_col:
         st.subheader("Key Metrics")
@@ -792,44 +792,6 @@ def page_home():
         )
         st.plotly_chart(fig_pattern, use_container_width=True)
     
-    with right_col:
-        st.subheader("Track Allocation", divider=False)
-        
-        # Track distribution
-        track_counts = {}
-        for r in results:
-            track = r['track']
-            track_counts[track] = track_counts.get(track, 0) + 1
-        
-        track_order = ['Track A', 'Track B', 'Track A-Transition']
-        sorted_tracks = [t for t in track_order if t in track_counts.keys()]
-        sorted_counts = [track_counts[t] for t in sorted_tracks]
-        
-        track_df = pd.DataFrame({
-            'Track': sorted_tracks,
-            'Count': sorted_counts
-        })
-        
-        fig_track = px.bar(
-            track_df,
-            x='Track',
-            y='Count',
-            title="",
-            color_discrete_sequence=['#3b82f6'],
-            text='Count'
-        )
-        fig_track.update_traces(textposition='auto', textfont=dict(size=12))
-        fig_track.update_layout(
-            height=350,
-            showlegend=False,
-            margin=dict(t=20, b=0, l=0, r=0),
-            xaxis_title="",
-            yaxis_title="",
-            xaxis=dict(tickfont=dict(size=10)),
-            yaxis=dict(tickfont=dict(size=10))
-        )
-        st.plotly_chart(fig_track, use_container_width=True)
-    
     st.divider()
     
     # TOP 5 CANDIDATES
@@ -869,18 +831,15 @@ def page_home():
                 st.markdown(f'<div class="not-asymmetric">No Pattern</div>', unsafe_allow_html=True)
         
         # Detail row
-        detail_col1, detail_col2, detail_col3, detail_col4, detail_btn = st.columns([1, 1, 1, 1, 1.5])
+        detail_col1, detail_col2, detail_col3, detail_btn = st.columns([1, 1, 1, 1.5])
         
         with detail_col1:
-            st.caption(f"Track: **{track}**")
-        
-        with detail_col2:
             st.caption(f"Signals: **{signals}**")
         
-        with detail_col3:
+        with detail_col2:
             st.caption(f"Halal: **{halal}**")
         
-        with detail_col4:
+        with detail_col3:
             st.caption(f"Score: {score:.2f}/3.0")
         
         with detail_btn:
@@ -903,7 +862,6 @@ def page_home():
         | **Asymmetry** | Raw asymmetry component (0-3.0) |
         | **Signals** | Number of confirming technical/fundamental signals (0-24) |
         | **Pattern** | Pattern type: FULL (3 parts), PARTIAL (1-2 parts), or NONE |
-        | **Track** | Halal structure: Track A (clean), Track B (structured), or A-Transition |
         | **Halal** | Islamic screening result: PASS or FAIL |
         | **Conviction** | Overall confidence level: low/medium/high |
         """)
@@ -915,12 +873,12 @@ def page_home():
     # Format for display
     display_df = df[[
         'rank', 'ticker', 'composite_score', 'asymmetry_score', 
-        'signal_raw', 'pattern', 'track', 'halal_status', 'conviction'
+        'signal_raw', 'pattern', 'halal_status', 'conviction'
     ]].copy()
     
     display_df.columns = [
         'Rank', 'Ticker', 'Score', 'Asymmetry', 'Signals', 
-        'Pattern', 'Track', 'Halal', 'Conviction'
+        'Pattern', 'Halal', 'Conviction'
     ]
     
     # Color code
