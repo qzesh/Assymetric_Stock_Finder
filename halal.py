@@ -553,7 +553,7 @@ DECISION: FAIL
 REASONING: Brief explanation in 1-2 sentences"""
 
             message = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",  # Use widely available model
+                model="claude-opus-4-1",  # Use widely available Claude Opus model
                 max_tokens=150,
                 messages=[
                     {
