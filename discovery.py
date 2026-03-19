@@ -331,8 +331,8 @@ class DiscoveryWorkflow:
         ranked = []
         
         for ticker, validation in validation_results.items():
-            # Skip errors
-            if validation.get('status') == 'error':
+            # Skip errors or None values
+            if not validation or validation.get('status') == 'error':
                 continue
             
             # Extract key metrics
