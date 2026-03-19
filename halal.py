@@ -517,7 +517,7 @@ class HalalGateEngine:
         """
         
         if not self.client:
-            self.logger.warning(f"Claude AI unavailable for {ticker} halal review. Returning unverified.")
+            self.logger.warning(f"Claude AI unavailable for {ticker} halal review (API key or library missing). Returning unverified.")
             return None
         
         try:
@@ -543,19 +543,18 @@ Consider:
 3. Islamic finance principles prioritize transparency but allow reasonable business structures
 4. When data is unavailable, a conservative but practical approach is to classify based on available evidence
 
-Respond ONLY with a JSON object in this exact format:
-{{
-  "status": "pass" or "fail",
-  "reasoning": "Brief explanation (1-2 sentences) of why you determined pass or fail",
-  "confidence": "high" or "medium" or "low"
-}}
+Respond with EXACTLY this format:
+DECISION: PASS
+REASONING: Brief explanation in 1-2 sentences
 
-If you believe the unverified flags indicate potential non-compliance that cannot be resolved without more data, return "fail".
-If you believe the available evidence supports halal compliance, return "pass"."""
+OR
+
+DECISION: FAIL
+REASONING: Brief explanation in 1-2 sentences"""
 
             message = self.client.messages.create(
-                model="claude-opus-4-1",
-                max_tokens=200,
+                model="claude-3-haiku-20250305",  # Fast and cost-effective
+                max_tokens=150,
                 messages=[
                     {
                         "role": "user",
@@ -564,31 +563,36 @@ If you believe the available evidence supports halal compliance, return "pass"."
                 ]
             )
             
-            response_text = message.content[0].text
+            response_text = message.content[0].text.strip()
             
-            # Parse JSON response
-            import json
-            import re
-            
-            # Extract JSON from response
-            json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
-            if json_match:
-                response_json = json.loads(json_match.group())
-                status = response_json.get('status', 'fail').lower()
-                reasoning = response_json.get('reasoning', 'Claude review completed')
-                
-                # Build verdict
-                verdict = f"HALAL {'COMPLIANT' if status == 'pass' else 'NON-COMPLIANT'} (Claude AI Review) - {reasoning}"
-                
-                return {
-                    'status': status,
-                    'verdict': verdict,
-                    'reasoning': reasoning,
-                    'confidence': response_json.get('confidence', 'medium')
-                }
+            # Parse response with simple string matching
+            if "DECISION: PASS" in response_text:
+                decision = "pass"
+            elif "DECISION: FAIL" in response_text:
+                decision = "fail"
             else:
-                self.logger.warning(f"Could not parse Claude response for {ticker}: {response_text}")
+                self.logger.warning(f"Claude didn't reach a clear decision for {ticker}: {response_text}")
                 return None
+            
+            # Extract reasoning
+            lines = response_text.split('\n')
+            reasoning = ""
+            for i, line in enumerate(lines):
+                if "REASONING:" in line:
+                    reasoning = line.replace("REASONING:", "").strip()
+                    # If reasoning spans multiple lines, capture them
+                    if not reasoning and i + 1 < len(lines):
+                        reasoning = lines[i + 1].strip()
+                    break
+            
+            # Build verdict
+            verdict = f"HALAL {'COMPLIANT' if decision == 'pass' else 'NON-COMPLIANT'} (Claude AI Review) - {reasoning}"
+            
+            return {
+                'status': decision,
+                'verdict': verdict,
+                'reasoning': reasoning
+            }
                 
         except Exception as e:
             self.logger.error(f"Claude AI review failed for {ticker}: {str(e)}")
