@@ -1337,42 +1337,55 @@ def page_search_stock():
                     
                     st.divider()
                     
-                    # CLAUDE AI ANALYSIS - WITH CACHING
+                    # CLAUDE AI ANALYSIS - OPT-IN WITH CACHING
                     st.header("AI Investment Analysis")
                     
-                    # Cache control
-                    col_title, col_refresh = st.columns([4, 1])
-                    with col_refresh:
-                        if st.button("Refresh Analysis", use_container_width=True, key=f"search_refresh_{ticker_input}"):
-                            st.session_state[f"search_force_refresh_{ticker_input}"] = True
-                            st.rerun()
+                    # Check if cache exists
+                    cached_text, cached_at = get_cached_ai_analysis(ticker_input)
+                    has_valid_cache = cached_text is not None
                     
-                    force_refresh = st.session_state.get(f"search_force_refresh_{ticker_input}", False)
-                    
-                    with st.spinner("Getting Claude analysis..."):
-                        ai_analysis, cached_at = get_claude_analysis(ticker_input, validation, force_refresh=force_refresh)
-                    
-                    # Clear the force_refresh flag
-                    if force_refresh:
-                        st.session_state[f"search_force_refresh_{ticker_input}"] = False
-                    
-                    # Show cache status
-                    if cached_at:
-                        from datetime import datetime as dt
-                        cached_time = dt.fromisoformat(cached_at)
-                        age_mins = int((dt.now() - cached_time).total_seconds() / 60)
-                        st.caption(f"📦 Cached {age_mins} minutes ago (expires in 14 days)")
-                    elif ai_analysis:
-                        st.caption("✨ Fresh analysis from Claude API")
-                    
-                    if ai_analysis:
-                        # Display as formatted sections, not raw JSON
-                        col1, col2 = st.columns([3, 1])
+                    if has_valid_cache:
+                        # Show cache status and refresh button
+                        col_title, col_refresh = st.columns([4, 1])
+                        with col_title:
+                            from datetime import datetime as dt
+                            cached_time = dt.fromisoformat(cached_at)
+                            age_mins = int((dt.now() - cached_time).total_seconds() / 60)
+                            st.caption(f"📦 Cached {age_mins} minutes ago (expires in 14 days)")
                         
+                        with col_refresh:
+                            if st.button("Refresh", use_container_width=True, key=f"search_refresh_{ticker_input}"):
+                                st.session_state[f"search_run_analysis_{ticker_input}"] = True
+                                st.rerun()
+                        
+                        # Parse and display cached analysis
+                        try:
+                            import re
+                            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cached_text, re.DOTALL)
+                            if json_match:
+                                ai_analysis = json.loads(json_match.group())
+                            else:
+                                ai_analysis = {
+                                    'thesis': cached_text,
+                                    'risks': 'See analysis above',
+                                    'catalyst': 'See analysis above',
+                                    'conviction': 5,
+                                    'recommendation': 'HOLD'
+                                }
+                        except:
+                            ai_analysis = {
+                                'thesis': cached_text,
+                                'risks': 'See analysis above',
+                                'catalyst': 'See analysis above',
+                                'conviction': 5,
+                                'recommendation': 'HOLD'
+                            }
+                        
+                        # Display analysis
+                        col1, col2 = st.columns([3, 1])
                         with col1:
                             st.subheader("Investment Thesis")
                             st.write(ai_analysis.get('thesis', 'N/A'))
-                            
                         with col2:
                             recommendation = ai_analysis.get('recommendation', 'HOLD')
                             if recommendation == 'BUY':
@@ -1385,11 +1398,9 @@ def page_search_stock():
                         st.divider()
                         
                         col1, col2 = st.columns(2)
-                        
                         with col1:
                             st.subheader("Key Risks")
                             st.write(ai_analysis.get('risks', 'N/A'))
-                        
                         with col2:
                             st.subheader("Catalyst & Timeline")
                             st.write(ai_analysis.get('catalyst', 'N/A'))
@@ -1405,8 +1416,28 @@ def page_search_stock():
                         with col3:
                             rec = ai_analysis.get('recommendation', 'HOLD')
                             st.metric("Recommendation", rec)
+                    
                     else:
-                        st.info("💡 **Tip:** Set ANTHROPIC_API_KEY in .env file to enable AI explanations")
+                        # No cache - show button to run analysis
+                        st.info("Claude AI analysis not yet generated for this stock")
+                        
+                        if st.button("Run Claude Analysis", use_container_width=True, key=f"search_run_button_{ticker_input}"):
+                            st.session_state[f"search_run_analysis_{ticker_input}"] = True
+                            st.rerun()
+                        
+                        # If user clicked button, generate and cache analysis
+                        if st.session_state.get(f"search_run_analysis_{ticker_input}", False):
+                            with st.spinner("Generating Claude analysis (first time - this caches for 14 days)..."):
+                                ai_analysis, _ = get_claude_analysis(ticker_input, validation, force_refresh=True)
+                            
+                            # Clear flag
+                            st.session_state[f"search_run_analysis_{ticker_input}"] = False
+                            
+                            if ai_analysis:
+                                st.success("Analysis generated and cached!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to generate analysis")
                     
             except Exception as e:
                 st.error(f"❌ Error analyzing {ticker_input}: {str(e)}")
