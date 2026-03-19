@@ -726,7 +726,7 @@ def page_home():
     
     st.divider()
     
-    # SUMMARY METRICS & STATISTICS - COMBINED LAYOUT
+    # SUMMARY METRICS & STATISTICS - FULL-WIDTH OPTIMIZED LAYOUT
     st.header("Discovery Summary")
     
     # Calculate metrics upfront
@@ -734,11 +734,12 @@ def page_home():
     full_asymmetric = sum(1 for r in results if r['pattern'] == 'full')
     partial_asymmetric = sum(1 for r in results if r['pattern'] == 'partial')
     passed_signals = sum(1 for r in results if r['signal_raw'] >= r.get('signal_threshold', 16))
+    full_pct = (full_asymmetric / total_candidates * 100) if total_candidates > 0 else 0
     
-    # Main layout: Metrics on left, charts on right
-    metrics_col, charts_col = st.columns([1, 1.2])
+    # Main layout: metrics + quick stats LEFT, charts CENTER & RIGHT
+    left_col, center_col, right_col = st.columns([1, 1.1, 1.1])
     
-    with metrics_col:
+    with left_col:
         st.subheader("Key Metrics")
         
         # 2x2 metric grid
@@ -754,24 +755,22 @@ def page_home():
         with metric_row2_col2:
             st.metric("Strong Signals", passed_signals)
         
-        st.markdown("---")
+        st.markdown("<hr style='margin: 20px 0; border: none; border-top: 1px solid #1f2937;'>", unsafe_allow_html=True)
         
-        # Quick stats
-        st.markdown("### Quick Stats")
-        
-        full_pct = (full_asymmetric / total_candidates * 100) if total_candidates > 0 else 0
-        avg_signals = passed_signals
-        
+        # Quick stats - no emojis
+        st.subheader("Insights", divider=False)
         st.markdown(f"""
-        💯 **Asymmetry Quality**: {full_pct:.0f}% full patterns
-        
-        📊 **Signal Strength**: {passed_signals} stocks with 16+ signals
-        
-        🎯 **Conversion Rate**: {full_asymmetric} out of {total_candidates} candidates
+        **Quality Rate**: {full_pct:.0f}% full patterns
+
+        **Signal Coverage**: {passed_signals} stocks qualify
+
+        **Conversion**: {full_asymmetric}/{total_candidates} candidates
         """)
     
-    with charts_col:
-        # Pattern distribution pie chart
+    with center_col:
+        st.subheader("Pattern Distribution", divider=False)
+        
+        # Pattern distribution pie chart - larger
         pattern_counts = {}
         for r in results:
             pattern = r['pattern'].upper()
@@ -780,17 +779,56 @@ def page_home():
         fig_pattern = px.pie(
             values=list(pattern_counts.values()),
             names=['Full Asymmetric' if x == 'FULL' else 'Partial' if x == 'PARTIAL' else 'None' for x in pattern_counts.keys()],
-            title="Pattern Distribution",
+            title="",
             color_discrete_map={'Full Asymmetric': '#10b981', 'Partial': '#f59e0b', 'None': '#ef4444'},
-            hole=0.4
+            hole=0.35
         )
         fig_pattern.update_layout(
-            height=300,
+            height=350,
             showlegend=True,
-            font=dict(size=11),
-            margin=dict(t=30, b=0, l=0, r=0)
+            legend=dict(x=0.7, y=0.5, font=dict(size=10)),
+            font=dict(size=10),
+            margin=dict(t=20, b=0, l=0, r=0)
         )
-        st.plotly_chart(fig_pattern, use_container_width=True, height=300)
+        st.plotly_chart(fig_pattern, use_container_width=True)
+    
+    with right_col:
+        st.subheader("Track Allocation", divider=False)
+        
+        # Track distribution
+        track_counts = {}
+        for r in results:
+            track = r['track']
+            track_counts[track] = track_counts.get(track, 0) + 1
+        
+        track_order = ['Track A', 'Track B', 'Track A-Transition']
+        sorted_tracks = [t for t in track_order if t in track_counts.keys()]
+        sorted_counts = [track_counts[t] for t in sorted_tracks]
+        
+        track_df = pd.DataFrame({
+            'Track': sorted_tracks,
+            'Count': sorted_counts
+        })
+        
+        fig_track = px.bar(
+            track_df,
+            x='Track',
+            y='Count',
+            title="",
+            color_discrete_sequence=['#3b82f6'],
+            text='Count'
+        )
+        fig_track.update_traces(textposition='auto', textfont=dict(size=12))
+        fig_track.update_layout(
+            height=350,
+            showlegend=False,
+            margin=dict(t=20, b=0, l=0, r=0),
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickfont=dict(size=10)),
+            yaxis=dict(tickfont=dict(size=10))
+        )
+        st.plotly_chart(fig_track, use_container_width=True)
     
     st.divider()
     
@@ -851,100 +889,6 @@ def page_home():
                 st.rerun()
         
         st.divider()
-    
-    # ADDITIONAL INSIGHTS
-    st.header("Detailed Breakdown")
-    
-    insight_col1, insight_col2 = st.columns(2)
-    
-    with insight_col1:
-        st.subheader("Track Distribution")
-        st.caption("Halal compliance profile of candidates")
-        
-        # Track distribution
-        track_counts = {}
-        for r in results:
-            track = r['track']
-            track_counts[track] = track_counts.get(track, 0) + 1
-        
-        # Sort tracks for consistent display
-        track_order = ['Track A', 'Track B', 'Track A-Transition']
-        sorted_tracks = [t for t in track_order if t in track_counts.keys()]
-        sorted_counts = [track_counts[t] for t in sorted_tracks]
-        
-        # Create DataFrame for Plotly
-        track_df = pd.DataFrame({
-            'Track Type': sorted_tracks,
-            'Count': sorted_counts
-        })
-        
-        fig = px.bar(
-            track_df,
-            x='Track Type',
-            y='Count',
-            title="",
-            color_discrete_sequence=['#667eea'],
-            text='Count'
-        )
-        fig.update_traces(textposition='auto')
-        fig.update_layout(
-            height=280,
-            showlegend=False,
-            margin=dict(t=0, b=0, l=0, r=0),
-            xaxis_title="",
-            yaxis_title=""
-        )
-        st.plotly_chart(fig, use_container_width=True, height=280)
-        
-        # Track explanation
-        with st.expander("What do these mean?"):
-            st.markdown("""
-            - **Track A**: Clean structure (no interest debt) 🟢
-            - **Track B**: Modified structure (some interest) 🟡
-            - **Track A-Transition**: Improving structure 📈
-            """)
-    
-    with insight_col2:
-        st.subheader("Signal Coverage")
-        st.caption("How many stocks have strong signals")
-        
-        # Create signal distribution
-        signal_bins = [0, 8, 16, 24]
-        signal_labels = ['Weak\n(0-8)', 'Medium\n(9-16)', 'Strong\n(17-24)']
-        
-        signal_counts = [0, 0, 0]
-        for r in results:
-            sig = r['signal_raw']
-            if sig < 9:
-                signal_counts[0] += 1
-            elif sig < 17:
-                signal_counts[1] += 1
-            else:
-                signal_counts[2] += 1
-        
-        signal_df = pd.DataFrame({
-            'Signal Level': signal_labels,
-            'Count': signal_counts
-        })
-        
-        fig_signals = px.bar(
-            signal_df,
-            x='Signal Level',
-            y='Count',
-            title="",
-            color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981'],
-            text='Count'
-        )
-        fig_signals.update_traces(textposition='auto')
-        fig_signals.update_layout(
-            height=280,
-            showlegend=False,
-            margin=dict(t=0, b=0, l=0, r=0),
-            xaxis_title="",
-            yaxis_title=""
-        )
-        st.plotly_chart(fig_signals, use_container_width=True, height=280)
-
     
     # FULL TABLE
     st.header("Full Candidate List")
