@@ -370,7 +370,6 @@ class DiscoveryWorkflow:
                 'signal_raw': signal_score,
                 'composite_score': composite_score,
                 'halal_status': halal_status,
-                'track': track,
                 'pattern': pattern_type,
                 'conviction': conviction,
                 'validation': validation
