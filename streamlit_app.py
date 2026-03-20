@@ -18,11 +18,12 @@ import streamlit as st
 import pandas as pd
 import json
 import sqlite3
+import subprocess
+import sys
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from validation import ValidationWorkflow
-from discovery import DiscoveryWorkflow
 
 # Try to import AI reasoner (optional)
 try:
@@ -670,48 +671,38 @@ def get_claude_analysis(ticker, validation_data, force_refresh=False):
 
 
 def run_discovery_workflow():
-    """Run the discovery workflow and update discovery_results.json."""
+    """Run the discovery workflow by calling show_discovery_results.py script."""
     try:
-        workflow = DiscoveryWorkflow()
+        # Run the existing show_discovery_results.py script
+        # This loads from discovery_checkpoint.db and saves to discovery_results.json
+        result = subprocess.run(
+            [sys.executable, 'show_discovery_results.py'],
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 minute timeout
+        )
         
-        # Run discovery
-        result = workflow.discover()
+        if result.returncode != 0:
+            error_msg = result.stderr or result.stdout or "Unknown error"
+            return False, f"Script failed with return code {result.returncode}: {error_msg}"
         
-        # Check if result is None or not a dict
-        if result is None:
-            return False, "Discovery returned None (unknown error)"
+        # Check if discovery_results.json was created/updated
+        try:
+            with open('discovery_results.json', 'r') as f:
+                results = json.load(f)
+            
+            if not results:
+                return False, "Results file is empty"
+            
+            return True, f"Discovery complete: {len(results)} candidates loaded from checkpoint database"
         
-        if not isinstance(result, dict):
-            return False, f"Discovery returned unexpected type: {type(result)}"
-        
-        status = result.get('status')
-        
-        # Check for error status
-        if status == 'error':
-            return False, result.get('error', 'Unknown error')
-        
-        # Check for warning status
-        if status == 'warning':
-            return False, f"Discovery warning: {result.get('error', 'No candidates ranked successfully')}"
-        
-        # Extract and format results for discovery_results.json
-        ranking = result.get('ranking', [])
-        
-        if ranking is None:
-            return False, "No ranking data generated"
-        
-        if not isinstance(ranking, list):
-            return False, f"Invalid ranking data: {type(ranking)}"
-        
-        if len(ranking) == 0:
-            return False, "No candidates in final ranking (check logs for details)"
-        
-        # Save to discovery_results.json
-        with open('discovery_results.json', 'w') as f:
-            json.dump(ranking, f, indent=2)
-        
-        return True, f"Discovery complete: {len(ranking)} candidates ranked"
+        except FileNotFoundError:
+            return False, "Results file not created (discovery_checkpoint.db may be empty)"
+        except json.JSONDecodeError:
+            return False, "Results file is invalid JSON"
     
+    except subprocess.TimeoutExpired:
+        return False, "Discovery script timed out after 2 minutes"
     except Exception as e:
         import traceback
         error_msg = f"{str(e)}\n\n{traceback.format_exc()}"
