@@ -22,6 +22,7 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from validation import ValidationWorkflow
+from discovery import DiscoveryWorkflow
 
 # Try to import AI reasoner (optional)
 try:
@@ -666,6 +667,33 @@ def get_claude_analysis(ticker, validation_data, force_refresh=False):
         import traceback
         traceback.print_exc()
         return None, None
+
+
+def run_discovery_workflow():
+    """Run the discovery workflow and update discovery_results.json."""
+    try:
+        workflow = DiscoveryWorkflow()
+        
+        # Run discovery
+        result = workflow.discover()
+        
+        if result.get('status') == 'error':
+            return False, result.get('error', 'Unknown error')
+        
+        # Extract and format results for discovery_results.json
+        ranking = result.get('ranking', [])
+        
+        if ranking:
+            # Save to discovery_results.json
+            with open('discovery_results.json', 'w') as f:
+                json.dump(ranking, f, indent=2)
+            
+            return True, f"Discovery complete: {len(ranking)} candidates ranked"
+        else:
+            return False, "No ranking results generated"
+    
+    except Exception as e:
+        return False, str(e)
 
 
 # =========================================================================
@@ -1459,6 +1487,35 @@ def main():
     
     elif page == "Search Stock":
         page_search_stock()
+    
+    # Discovery Update Section
+    st.divider()
+    st.markdown("### Update Stock Universe")
+    st.markdown("Run discovery workflow to find new top 5 asymmetric opportunities")
+    
+    col_btn, col_info = st.columns([1, 2])
+    
+    with col_btn:
+        if st.button("Run Discovery", use_container_width=True, key="run_discovery_btn"):
+            with st.spinner("Running discovery workflow... This may take a few minutes"):
+                success, message = run_discovery_workflow()
+            
+            if success:
+                st.success(message)
+                st.info("Dashboard updated! Refresh to see new results.")
+                # Clear cache to show updated results
+                st.cache_data.clear()
+            else:
+                st.error(f"Discovery failed: {message}")
+    
+    with col_info:
+        st.info(
+            "**What this does:**\n"
+            "- Screens all stocks for asymmetric patterns\n"
+            "- Validates halal compliance\n"
+            "- Ranks by opportunity strength\n"
+            "- Updates top 5 candidates"
+        )
     
     # Footer
     st.divider()
