@@ -677,23 +677,35 @@ def run_discovery_workflow():
         # Run discovery
         result = workflow.discover()
         
+        # Check if result is None or not a dict
+        if result is None:
+            return False, "Discovery returned None (unknown error)"
+        
+        if not isinstance(result, dict):
+            return False, f"Discovery returned unexpected type: {type(result)}"
+        
         if result.get('status') == 'error':
             return False, result.get('error', 'Unknown error')
         
         # Extract and format results for discovery_results.json
         ranking = result.get('ranking', [])
         
-        if ranking:
-            # Save to discovery_results.json
-            with open('discovery_results.json', 'w') as f:
-                json.dump(ranking, f, indent=2)
-            
-            return True, f"Discovery complete: {len(ranking)} candidates ranked"
-        else:
-            return False, "No ranking results generated"
+        if ranking is None:
+            return False, "No ranking data generated"
+        
+        if not isinstance(ranking, list) or len(ranking) == 0:
+            return False, f"Invalid ranking data: {type(ranking)} with {len(ranking) if isinstance(ranking, list) else '?'} items"
+        
+        # Save to discovery_results.json
+        with open('discovery_results.json', 'w') as f:
+            json.dump(ranking, f, indent=2)
+        
+        return True, f"Discovery complete: {len(ranking)} candidates ranked"
     
     except Exception as e:
-        return False, str(e)
+        import traceback
+        error_msg = f"{str(e)}\n\n{traceback.format_exc()}"
+        return False, error_msg
 
 
 # =========================================================================
@@ -1502,11 +1514,12 @@ def main():
             
             if success:
                 st.success(message)
-                st.info("Dashboard updated! Refresh to see new results.")
+                st.info("Dashboard updated! Refresh page to see new results.")
                 # Clear cache to show updated results
                 st.cache_data.clear()
             else:
-                st.error(f"Discovery failed: {message}")
+                st.error("Discovery failed:")
+                st.code(message, language="text")
     
     with col_info:
         st.info(
