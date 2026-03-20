@@ -139,7 +139,19 @@ class DiscoveryWorkflow:
         # ===================================================================
         
         self.logger.info("Phase 3: Ranking candidates")
+        self.logger.info(f"Validation results count: {len(validation_results)}")
+        self.logger.info(f"Non-None validations: {sum(1 for v in validation_results.values() if v is not None)}")
+        
         ranking = self._rank_candidates(validation_results)
+        
+        self.logger.info(f"Ranked candidates: {len(ranking)}")
+        
+        if not ranking:
+            self.logger.warning("No candidates passed ranking (all failed halal or validation)")
+            result['status'] = 'warning'
+            result['error'] = 'No candidates passed halal screening and validation'
+            return result
+        
         result['ranking'] = ranking
         
         # Extract top 5
@@ -189,10 +201,19 @@ class DiscoveryWorkflow:
                 
                 # Run validation
                 validation = self.validator.validate_ticker(ticker)
-                results[ticker] = validation
                 
-                # Save checkpoint
-                self._save_checkpoint(run_id, ticker, validation)
+                # Check for None return (shouldn't happen but defensive)
+                if validation is None:
+                    self.logger.error(f"{ticker}: validate_ticker returned None")
+                    results[ticker] = {
+                        'ticker': ticker,
+                        'status': 'error',
+                        'error': 'Validation returned None (unknown error)'
+                    }
+                else:
+                    results[ticker] = validation
+                    # Save checkpoint only if valid result
+                    self._save_checkpoint(run_id, ticker, validation)
                 
                 # Rate limiting - be gentle with yfinance
                 if i < len(candidates):
@@ -331,17 +352,30 @@ class DiscoveryWorkflow:
         ranked = []
         
         for ticker, validation in validation_results.items():
-            # Skip errors or None values
-            if not validation or validation.get('status') == 'error':
+            # Skip errors or None values - with explicit logging
+            if validation is None:
+                self.logger.warning(f"{ticker}: Validation is None - skipping")
                 continue
             
-            # Extract key metrics
-            halal_status = validation.get('stages', {}).get('halal_gates', {}).get('halal_status', 'unknown')
-            track = validation.get('stages', {}).get('track_detection', {}).get('track', 'unknown')
-            pattern_type = validation.get('stages', {}).get('pattern_detection', {}).get('result', 'not_asymmetric')
-            signal_score = validation.get('stages', {}).get('signal_scoring', {}).get('total_score', 0)
-            signal_threshold = validation.get('stages', {}).get('signal_scoring', {}).get('threshold', 16)
-            conviction = validation.get('stages', {}).get('pattern_detection', {}).get('conviction_max', 'low')
+            if not isinstance(validation, dict):
+                self.logger.warning(f"{ticker}: Validation is not a dict (got {type(validation)}) - skipping")
+                continue
+            
+            if validation.get('status') == 'error':
+                self.logger.info(f"{ticker}: Validation error - {validation.get('error', 'unknown')} - skipping")
+                continue
+            
+            # Extract key metrics - with safer access
+            try:
+                halal_status = validation.get('stages', {}).get('halal_gates', {}).get('halal_status', 'unknown')
+                track = validation.get('stages', {}).get('track_detection', {}).get('track', 'unknown')
+                pattern_type = validation.get('stages', {}).get('pattern_detection', {}).get('result', 'not_asymmetric')
+                signal_score = validation.get('stages', {}).get('signal_scoring', {}).get('total_score', 0)
+                signal_threshold = validation.get('stages', {}).get('signal_scoring', {}).get('threshold', 16)
+                conviction = validation.get('stages', {}).get('pattern_detection', {}).get('conviction_max', 'low')
+            except AttributeError as e:
+                self.logger.error(f"{ticker}: Error extracting metrics: {str(e)}")
+                continue
             
             # Skip if halal failed
             if halal_status == 'fail':

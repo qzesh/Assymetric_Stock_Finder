@@ -684,8 +684,15 @@ def run_discovery_workflow():
         if not isinstance(result, dict):
             return False, f"Discovery returned unexpected type: {type(result)}"
         
-        if result.get('status') == 'error':
+        status = result.get('status')
+        
+        # Check for error status
+        if status == 'error':
             return False, result.get('error', 'Unknown error')
+        
+        # Check for warning status
+        if status == 'warning':
+            return False, f"Discovery warning: {result.get('error', 'No candidates ranked successfully')}"
         
         # Extract and format results for discovery_results.json
         ranking = result.get('ranking', [])
@@ -693,8 +700,11 @@ def run_discovery_workflow():
         if ranking is None:
             return False, "No ranking data generated"
         
-        if not isinstance(ranking, list) or len(ranking) == 0:
-            return False, f"Invalid ranking data: {type(ranking)} with {len(ranking) if isinstance(ranking, list) else '?'} items"
+        if not isinstance(ranking, list):
+            return False, f"Invalid ranking data: {type(ranking)}"
+        
+        if len(ranking) == 0:
+            return False, "No candidates in final ranking (check logs for details)"
         
         # Save to discovery_results.json
         with open('discovery_results.json', 'w') as f:
