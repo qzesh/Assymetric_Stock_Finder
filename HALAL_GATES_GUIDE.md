@@ -208,7 +208,7 @@ The halal gates are the **first step** in the validation workflow:
 
 ## Model Notes
 
-- Uses `claude-opus-4-1` for Claude AI reviews
+- Uses `claude-sonnet-4-6` for Claude AI reviews
 - Costs ~$0.01 per review (unverified cases only)
 - Falls back to 'unverified' status if Claude fails
 

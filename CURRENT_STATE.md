@@ -158,7 +158,7 @@ Assymetric_Stock_Finder/
 - Track B: 8 signals × 3-point scale = 24 max score (need 14+ to pass)
 
 **AI Layer:**
-- Claude (Sonnet 4.5 for testing, Opus 4.5 for final decisions)
+- Claude (Using Sonnet 4.6 for all decisions)
 - Web search enabled (recent earnings calls + news)
 - 11-field structured JSON output
 - Web search enabled (earnings calls + recent news)

@@ -26,7 +26,7 @@ print("\n[2/5] Verifying Claude AI setup...")
 engine = HalalGateEngine()
 if engine.client:
     print("     [OK] Claude AI client initialized")
-    print("     [OK] Using model: claude-opus-4-1")
+    print("     [OK] Using model: claude-sonnet-4-6")
 else:
     print("     [WARN] Claude AI client not available (will use unverified fallback)")
 

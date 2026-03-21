@@ -97,7 +97,7 @@ Test 4: MO (Tobacco, $30B revenue, $20B debt, 93% haram revenue)
 
 ### Claude API
 
-**Model Used**: `claude-opus-4-1` (enterprise-grade, cost-effective)
+**Model Used**: `claude-sonnet-4-6` (optimal cost-performance ratio)
 
 **Cost Breakdown**:
 - Input tokens: ~$0.015 per 1M tokens
@@ -124,7 +124,7 @@ See [API_SETUP.md](API_SETUP.md) for step-by-step instructions.
 
 ### Updated Files
 - 📝 [CURRENT_STATE.md](CURRENT_STATE.md) - Marked halal.py as complete
-- 📝 [halal.py](halal.py) - Fixed Claude model name (claude-opus-4-1)
+- 📝 [halal.py](halal.py) - Updated to Claude Sonnet model (claude-sonnet-4-6)
 
 ## How to Use
 
@@ -253,7 +253,7 @@ ai_reasoner.py (Step 9: AI analysis)
 
 - **Islamic Finance Standards**: AAOIFI (https://aaoifi.com/)
 - **Claude API Docs**: https://docs.anthropic.com/
-- **Implementation Note**: Using `claude-opus-4-1` for optimal cost/performance
+- **Implementation Note**: Using `claude-sonnet-4-6` for optimal cost/performance
 
 ---
 
