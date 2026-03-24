@@ -29,7 +29,14 @@ from validation import ValidationWorkflow
 try:
     from ai_reasoner import AIReasoningEngine
     CLAUDE_AVAILABLE = True
-except:
+except ImportError as e:
+    print(f"❌ Failed to import AIReasoningEngine: {e}")
+    CLAUDE_AVAILABLE = False
+except ValueError as e:
+    print(f"❌ API Key issue in AIReasoningEngine: {e}")
+    CLAUDE_AVAILABLE = False
+except Exception as e:
+    print(f"❌ Unexpected error loading Claude: {e}")
     CLAUDE_AVAILABLE = False
 
 # Page config
@@ -613,8 +620,10 @@ def cache_ai_analysis(ticker, analysis_text):
         
         conn.commit()
         conn.close()
+        print(f"✅ Cached analysis for {ticker}")
         return True
     except Exception as e:
+        print(f"❌ Failed to cache analysis for {ticker}: {e}")
         return False
 
 
@@ -629,8 +638,10 @@ def get_claude_analysis(ticker, validation_data, force_refresh=False):
     
     # Check cache first (unless force_refresh is True)
     if not force_refresh:
+        print(f"🔍 Checking cache for {ticker}...")
         cached_text, cached_at = get_cached_ai_analysis(ticker)
         if cached_text:
+            print(f"✅ Found cached analysis for {ticker}")
             # Parse cached text
             try:
                 analysis_json = json.loads(cached_text)
@@ -657,10 +668,13 @@ def get_claude_analysis(ticker, validation_data, force_refresh=False):
     
     # If no valid cache or force_refresh, call Claude API
     try:
+        print(f"🤖 Initializing Claude AI for {ticker}...")
         reasoner = AIReasoningEngine()
+        print(f"🤖 Calling Claude API for {ticker}...")
         
         # Use the correct method from AIReasoningEngine
         result = reasoner.analyze_candidate(ticker, validation_data)
+        print(f"🤖 Claude API response status: {result.get('status')}")
         
         if result.get('status') == 'success':
             analysis_text = result.get('ai_analysis', '')
@@ -1475,20 +1489,29 @@ def page_search_stock():
                         
                         # If user clicked button, generate and cache analysis
                         if st.session_state.get(f"search_run_analysis_{ticker_input}", False):
-                            with st.spinner("Generating Claude analysis (first time - this caches for 14 days)..."):
+                            with st.spinner("🔄 Generating Claude analysis (first time - this caches for 14 days)..."):
+                                print(f"\n{'='*60}")
+                                print(f"Starting Claude analysis for {ticker_input}")
+                                print(f"{'='*60}")
                                 ai_analysis, _ = get_claude_analysis(ticker_input, validation, force_refresh=True)
+                                print(f"Analysis result: {type(ai_analysis)} - {ai_analysis is not None}")
+                                print(f"{'='*60}\n")
                             
                             if ai_analysis:
                                 # Cache the analysis text (convert to JSON string if dict)
                                 analysis_text = json.dumps(ai_analysis) if isinstance(ai_analysis, dict) else str(ai_analysis)
-                                cache_ai_analysis(ticker_input, analysis_text)
+                                cache_success = cache_ai_analysis(ticker_input, analysis_text)
                                 
-                                # Clear flag and rerun to show cached display
-                                st.session_state[f"search_run_analysis_{ticker_input}"] = False
-                                st.success("Analysis generated and cached!")
-                                st.rerun()
+                                if cache_success:
+                                    # Clear flag and rerun to show cached display
+                                    st.session_state[f"search_run_analysis_{ticker_input}"] = False
+                                    st.success("✅ Analysis generated and cached!")
+                                    st.rerun()
+                                else:
+                                    st.error("⚠️ Analysis generated but failed to cache. Check console logs.")
+                                    st.session_state[f"search_run_analysis_{ticker_input}"] = False
                             else:
-                                st.error("Failed to generate analysis")
+                                st.error("❌ Failed to generate analysis. Check console logs for details.")
                                 st.session_state[f"search_run_analysis_{ticker_input}"] = False
                     
             except Exception as e:
