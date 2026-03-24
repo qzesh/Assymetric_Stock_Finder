@@ -20,7 +20,7 @@ import json
 import sqlite3
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 from validation import ValidationWorkflow
@@ -579,9 +579,10 @@ def get_cached_ai_analysis(ticker):
         conn = sqlite3.connect('discovery_checkpoint.db')
         cursor = conn.cursor()
         
+        # Query without expiry check in SQL - we'll check in Python
         cursor.execute('''
-            SELECT ai_analysis, cached_at FROM ai_analysis_cache 
-            WHERE ticker = ? AND expires_at > datetime('now')
+            SELECT ai_analysis, cached_at, expires_at FROM ai_analysis_cache 
+            WHERE ticker = ?
         ''', (ticker,))
         
         result = cursor.fetchone()
@@ -590,9 +591,21 @@ def get_cached_ai_analysis(ticker):
         if result:
             ai_analysis_text = result[0]
             cached_at = result[1]
-            return (ai_analysis_text, cached_at)
+            expires_at_str = result[2]
+            
+            # Check if cache is still valid (Python-side)
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str)
+                if expires_at > datetime.now():
+                    return (ai_analysis_text, cached_at)
+                else:
+                    return (None, None)  # Cache expired
+            except (ValueError, TypeError):
+                return (None, None)  # Invalid date format
+        
         return (None, None)
     except Exception as e:
+        print(f"Error retrieving cached analysis for {ticker}: {e}")
         return (None, None)
 
 
@@ -602,21 +615,25 @@ def cache_ai_analysis(ticker, analysis_text):
         conn = sqlite3.connect('discovery_checkpoint.db')
         cursor = conn.cursor()
         
-        # Ensure table exists
+        # Ensure table exists (matching discovery.py schema)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS ai_analysis_cache (
                 ticker TEXT PRIMARY KEY,
                 ai_analysis TEXT,
-                cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP DEFAULT datetime('now', '+14 days')
+                cached_at TEXT,
+                expires_at TEXT
             )
         ''')
         
-        # Insert or replace the analysis
+        # Calculate expiry date in Python (14 days from now)
+        now = datetime.now()
+        expires_at = (now + timedelta(days=14)).isoformat()
+        
+        # Insert or replace the analysis with calculated dates
         cursor.execute('''
             INSERT OR REPLACE INTO ai_analysis_cache (ticker, ai_analysis, cached_at, expires_at)
-            VALUES (?, ?, datetime('now'), datetime('now', '+14 days'))
-        ''', (ticker, analysis_text))
+            VALUES (?, ?, ?, ?)
+        ''', (ticker, analysis_text, now.isoformat(), expires_at))
         
         conn.commit()
         conn.close()
