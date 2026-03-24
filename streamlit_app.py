@@ -1224,12 +1224,21 @@ def page_search_stock():
     with col2:
         search_button = st.button("Analyze", use_container_width=True)
     
-    if search_button and ticker_input:
+    # Check for previously cached validation result
+    cached_validation = st.session_state.get(f"search_cached_validation_{ticker_input}")
+    
+    if (search_button or cached_validation is not None) and ticker_input:
         with st.spinner(f"🔄 Analyzing {ticker_input}..."):
             try:
-                # Run validation on the stock
-                validator = ValidationWorkflow()
-                validation = validator.validate_ticker(ticker_input)
+                # Use cached validation if available, otherwise fetch fresh
+                if cached_validation is not None:
+                    validation = cached_validation
+                else:
+                    # Run validation on the stock
+                    validator = ValidationWorkflow()
+                    validation = validator.validate_ticker(ticker_input)
+                    # Cache the result for subsequent reruns
+                    st.session_state[f"search_cached_validation_{ticker_input}"] = validation
                 
                 if validation.get('status') == 'error':
                     st.error(f"Error: {validation.get('message', 'Could not fetch data')}")
@@ -1363,6 +1372,8 @@ def page_search_stock():
                         
                         with col_refresh:
                             if st.button("Refresh", use_container_width=True, key=f"search_refresh_{ticker_input}"):
+                                # Clear cached validation so we fetch fresh data
+                                st.session_state.pop(f"search_cached_validation_{ticker_input}", None)
                                 st.session_state[f"search_run_analysis_{ticker_input}"] = True
                                 st.rerun()
                         
