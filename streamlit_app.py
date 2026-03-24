@@ -695,6 +695,16 @@ def get_claude_analysis(ticker, validation_data, force_refresh=False):
         
         # Use the correct method from AIReasoningEngine
         result = reasoner.analyze_candidate(ticker, validation_data)
+        
+        # Null check before accessing result
+        if result is None:
+            st.error(f"❌ Claude API returned no result for {ticker}")
+            return None, None
+        
+        if not isinstance(result, dict):
+            st.error(f"❌ Claude API returned invalid response format for {ticker}")
+            return None, None
+        
         print(f"🤖 Claude API response status: {result.get('status')}")
         
         if result.get('status') == 'success':
@@ -930,11 +940,16 @@ def page_home():
                     halal = 'UNVERIFIED'
                     print(f"⚠️ Validation returned None for {ticker}")
                 else:
-                    halal_gates = validation.get('stages', {}).get('halal_gates', {})
-                    halal = halal_gates.get('halal_status', 'UNVERIFIED').upper()
-                # Cache for 30 days
-                halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
-                print(f"✅ Fresh halal evaluation cached for {ticker}")
+                    stages = validation.get('stages', {})
+                    if stages is None or not isinstance(stages, dict):
+                        halal = 'UNVERIFIED'
+                        print(f"⚠️ Stages is None or not dict for {ticker}")
+                    else:
+                        halal_gates = stages.get('halal_gates', {})
+                        halal = halal_gates.get('halal_status', 'UNVERIFIED').upper()
+                        # Cache for 30 days (only if halal_gates is valid)
+                        halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
+                        print(f"✅ Fresh halal evaluation cached for {ticker}")
             except Exception as e:
                 # Fallback to JSON value
                 halal = candidate['halal_status'].upper()
@@ -1014,9 +1029,14 @@ def page_home():
                 if validation is None:
                     print(f"⚠️ Validation returned None for {ticker}")
                 else:
-                    halal_gates = validation.get('stages', {}).get('halal_gates', {})
-                    df.at[idx, 'halal_status'] = halal_gates.get('halal_status', 'UNVERIFIED')
-                    halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
+                    stages = validation.get('stages', {})
+                    if stages is None or not isinstance(stages, dict):
+                        df.at[idx, 'halal_status'] = 'UNVERIFIED'
+                        print(f"⚠️ Stages is None or not dict for {ticker}")
+                    else:
+                        halal_gates = stages.get('halal_gates', {})
+                        df.at[idx, 'halal_status'] = halal_gates.get('halal_status', 'UNVERIFIED')
+                        halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
             except Exception as e:
                 print(f"⚠️ Failed to evaluate halal for {ticker}: {e}")
     
@@ -1070,6 +1090,10 @@ def page_candidate_detail(ticker):
     
     # Extract information
     stages = validation.get('stages', {})
+    if stages is None or not isinstance(stages, dict):
+        st.error(f"❌ Could not extract stages data for {ticker}")
+        return
+    
     halal_gates = stages.get('halal_gates', {})
     track_detection = stages.get('track_detection', {})
     signal_scoring = stages.get('signal_scoring', {})
