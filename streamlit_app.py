@@ -925,8 +925,13 @@ def page_home():
             try:
                 validator = ValidationWorkflow()
                 validation = validator.validate_ticker(ticker)
-                halal_gates = validation.get('stages', {}).get('halal_gates', {})
-                halal = halal_gates.get('halal_status', 'UNVERIFIED').upper()
+                # Add null check before calling .get()
+                if validation is None:
+                    halal = 'UNVERIFIED'
+                    print(f"⚠️ Validation returned None for {ticker}")
+                else:
+                    halal_gates = validation.get('stages', {}).get('halal_gates', {})
+                    halal = halal_gates.get('halal_status', 'UNVERIFIED').upper()
                 # Cache for 30 days
                 halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
                 print(f"✅ Fresh halal evaluation cached for {ticker}")
@@ -1005,9 +1010,13 @@ def page_home():
             try:
                 validator = ValidationWorkflow()
                 validation = validator.validate_ticker(ticker)
-                halal_gates = validation.get('stages', {}).get('halal_gates', {})
-                df.at[idx, 'halal_status'] = halal_gates.get('halal_status', 'UNVERIFIED')
-                halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
+                # Add null check before calling .get()
+                if validation is None:
+                    print(f"⚠️ Validation returned None for {ticker}")
+                else:
+                    halal_gates = validation.get('stages', {}).get('halal_gates', {})
+                    df.at[idx, 'halal_status'] = halal_gates.get('halal_status', 'UNVERIFIED')
+                    halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
             except Exception as e:
                 print(f"⚠️ Failed to evaluate halal for {ticker}: {e}")
     
@@ -1340,12 +1349,18 @@ def page_search_stock():
                     # Cache the result for subsequent reruns
                     st.session_state[f"search_cached_validation_{ticker_input}"] = validation
                 
-                if validation.get('status') == 'error':
+                # Check if validation is None or invalid
+                if validation is None:
+                    st.error(f"❌ Failed to validate {ticker_input} - No data returned")
+                    st.info("This may happen if the stock ticker is invalid or data is unavailable.")
+                elif validation.get('status') == 'error':
                     st.error(f"Error: {validation.get('message', 'Could not fetch data')}")
                     st.info("Make sure the ticker is valid (e.g., MSFT, AAPL)")
-                else:
+                elif isinstance(validation, dict):
                     # Extract results
                     stages = validation.get('stages', {})
+                    if stages is None:
+                        stages = {}
                     halal_gates = stages.get('halal_gates', {})
                     track_detection = stages.get('track_detection', {})
                     signal_scoring = stages.get('signal_scoring', {})
