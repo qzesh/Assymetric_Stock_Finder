@@ -24,6 +24,10 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 from validation import ValidationWorkflow
+from halal_cache import HalalStatusCache
+
+# Initialize halal cache for 30-day caching
+halal_cache_manager = HalalStatusCache()
 
 # Try to import AI reasoner (optional)
 try:
@@ -910,7 +914,27 @@ def page_home():
         score = candidate['composite_score']
         pattern = candidate['pattern'].upper()
         track = candidate['track']
-        halal = candidate['halal_status'].upper()
+        
+        # Get halal status from cache or re-evaluate with Claude (30-day cache)
+        cached_halal = halal_cache_manager.get_cached_halal_status(ticker)
+        if cached_halal:
+            halal = cached_halal['halal_status'].upper()
+            print(f"📦 Using cached halal status for {ticker}")
+        else:
+            # Fresh evaluation with Claude
+            try:
+                validator = ValidationWorkflow()
+                validation = validator.validate_ticker(ticker)
+                halal_gates = validation.get('stages', {}).get('halal_gates', {})
+                halal = halal_gates.get('halal_status', 'UNVERIFIED').upper()
+                # Cache for 30 days
+                halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
+                print(f"✅ Fresh halal evaluation cached for {ticker}")
+            except Exception as e:
+                # Fallback to JSON value
+                halal = candidate['halal_status'].upper()
+                print(f"⚠️ Using JSON halal for {ticker}: {e}")
+        
         signals = f"{candidate['signal_raw']}/24"
         
         with col_rank:
@@ -970,6 +994,22 @@ def page_home():
     # Convert to DataFrame
     df = pd.DataFrame(results)
     df = df.sort_values('composite_score', ascending=False)
+    
+    # Update halal_status column with cached/fresh evaluations (30-day cache)
+    for idx, row in df.iterrows():
+        ticker = row['ticker']
+        cached_halal = halal_cache_manager.get_cached_halal_status(ticker)
+        if cached_halal:
+            df.at[idx, 'halal_status'] = cached_halal['halal_status']
+        else:
+            try:
+                validator = ValidationWorkflow()
+                validation = validator.validate_ticker(ticker)
+                halal_gates = validation.get('stages', {}).get('halal_gates', {})
+                df.at[idx, 'halal_status'] = halal_gates.get('halal_status', 'UNVERIFIED')
+                halal_cache_manager.set_cached_halal_status(ticker, halal_gates)
+            except Exception as e:
+                print(f"⚠️ Failed to evaluate halal for {ticker}: {e}")
     
     # Format for display
     display_df = df[[
