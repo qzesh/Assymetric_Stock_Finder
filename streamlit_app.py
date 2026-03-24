@@ -589,6 +589,35 @@ def get_cached_ai_analysis(ticker):
         return (None, None)
 
 
+def cache_ai_analysis(ticker, analysis_text):
+    """Write Claude AI analysis to cache (14-day expiry)."""
+    try:
+        conn = sqlite3.connect('discovery_checkpoint.db')
+        cursor = conn.cursor()
+        
+        # Ensure table exists
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ai_analysis_cache (
+                ticker TEXT PRIMARY KEY,
+                ai_analysis TEXT,
+                cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP DEFAULT datetime('now', '+14 days')
+            )
+        ''')
+        
+        # Insert or replace the analysis
+        cursor.execute('''
+            INSERT OR REPLACE INTO ai_analysis_cache (ticker, ai_analysis, cached_at, expires_at)
+            VALUES (?, ?, datetime('now'), datetime('now', '+14 days'))
+        ''', (ticker, analysis_text))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        return False
+
+
 def get_claude_analysis(ticker, validation_data, force_refresh=False):
     """
     Get Claude AI analysis with caching.
@@ -1449,14 +1478,18 @@ def page_search_stock():
                             with st.spinner("Generating Claude analysis (first time - this caches for 14 days)..."):
                                 ai_analysis, _ = get_claude_analysis(ticker_input, validation, force_refresh=True)
                             
-                            # Clear flag
-                            st.session_state[f"search_run_analysis_{ticker_input}"] = False
-                            
                             if ai_analysis:
+                                # Cache the analysis text (convert to JSON string if dict)
+                                analysis_text = json.dumps(ai_analysis) if isinstance(ai_analysis, dict) else str(ai_analysis)
+                                cache_ai_analysis(ticker_input, analysis_text)
+                                
+                                # Clear flag and rerun to show cached display
+                                st.session_state[f"search_run_analysis_{ticker_input}"] = False
                                 st.success("Analysis generated and cached!")
                                 st.rerun()
                             else:
                                 st.error("Failed to generate analysis")
+                                st.session_state[f"search_run_analysis_{ticker_input}"] = False
                     
             except Exception as e:
                 st.error(f"❌ Error analyzing {ticker_input}: {str(e)}")
